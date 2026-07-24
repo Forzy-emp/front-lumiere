@@ -1,1 +1,34 @@
 @import "tailwindcss";
+
+@theme {
+  --color-lumiere-primary: #22AADA;
+  --color-lumiere-secondary: #f2a160;
+  --color-lumiere-tertiary: #054986;
+  --color-lumiere-dark: #0d0d0d;
+}
+
+/* 
+  Dicas de Cores para o Dev Júnior:
+  Use as classes do Tailwind baseadas nos nomes abaixo para estilizar os componentes do sistema.
+  
+  1. Cor Primária (#22AADA) - Azul Claro / Solar:
+     - Aplicar fundo: bg-lumiere-primary
+     - Aplicar texto: text-lumiere-primary
+     - Aplicar borda: border-lumiere-primary
+     - Hover: hover:bg-lumiere-primary/90, hover:text-lumiere-primary
+
+  2. Cor Secundária (#f2a160) - Laranja Solar / Sol:
+     - Aplicar fundo: bg-lumiere-secondary
+     - Aplicar texto: text-lumiere-secondary
+     - Aplicar borda: border-lumiere-secondary
+
+  3. Cor Terciária (#054986) - Azul Escuro / Institucional:
+     - Aplicar fundo: bg-lumiere-tertiary
+     - Aplicar texto: text-lumiere-tertiary
+     - Aplicar borda: border-lumiere-tertiary
+
+  4. Cor Escura/Preta (#0d0d0d) - Base Dark / Escuro:
+     - Aplicar fundo: bg-lumiere-dark
+     - Aplicar texto: text-lumiere-dark
+     - Aplicar borda: border-lumiere-dark
+*/
