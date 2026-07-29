@@ -271,7 +271,7 @@ export default function Register() {
 
         <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-xl">
           <div className="mb-6 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-600 via-purple-500 to-orange-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-linear-to-br from-indigo-600 via-purple-500 to-orange-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
               L
             </div>
             <span className="text-lg font-bold text-slate-800 tracking-tight">Lumière</span>
@@ -430,7 +430,7 @@ export default function Register() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 mt-2 bg-gradient-to-r from-indigo-600 via-purple-500 to-orange-500 hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-lumiere-primary/10 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50"
+                className="w-full py-3 mt-2 bg-linear-to-r from-indigo-600 via-purple-500 to-orange-500 hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-lumiere-primary/10 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

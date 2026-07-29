@@ -33,7 +33,7 @@ export default function Login() {
   return (
   <div className="min-h-screen grid lg:grid-cols-2 bg-white">
     {/* Lado esquerdo */}
-    <div className="hidden lg:flex relative items-center justify-center overflow-hidden bg-gradient-to-br from-[#1F4EFF] via-[#2E5CFF] to-[#FF8A3D]">
+    <div className="hidden lg:flex relative items-center justify-center overflow-hidden bg-linear-to-br from-[#1F4EFF] via-[#2E5CFF] to-[#FF8A3D]">
       <div className="absolute inset-0 bg-black/10" />
 
       <div className="relative z-10 flex flex-col items-center text-center text-white px-10">
@@ -41,7 +41,7 @@ export default function Login() {
           <img
             src="/images/logo-lumiere.png"
             alt="Solar"
-            className="w-[360px] max-w-full"
+            className="w-90 max-w-full"
           />
         </div>
 
@@ -61,7 +61,7 @@ export default function Login() {
 
         {/* Logo */}
         <div className="flex justify-center items-center gap-3 mb-12">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#2E5CFF] to-[#FF7A2F] flex items-center justify-center text-white font-bold text-lg">
+          <div className="h-11 w-11 rounded-xl bg-linear-to-br from-[#2E5CFF] to-[#FF7A2F] flex items-center justify-center text-white font-bold text-lg">
             L
           </div>
 
@@ -153,7 +153,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#2E5CFF] to-[#FF7A2F] font-semibold text-white transition hover:opacity-95"
+            className="flex h-14 w-full items-center justify-center rounded-xl bg-linear-to-br from-[#2E5CFF] to-[#FF7A2F] font-semibold text-white transition hover:opacity-95"
           >
             {loading ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
