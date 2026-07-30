@@ -105,13 +105,13 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col md:flex-row font-sans transition-colors duration-200">
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 shadow-sm">
+      <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <LumiereLogoHorizontal className="h-9" />
         <button 
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="text-slate-600 hover:text-lumiere-tertiary p-1 focus:outline-none"
+          className="text-slate-600 dark:text-slate-300 hover:text-lumiere-tertiary p-1 focus:outline-none"
         >
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -119,12 +119,12 @@ export default function Layout() {
 
       {/* Sidebar - Desktop & Mobile Drawer */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 p-6 flex flex-col justify-between transform transition-transform duration-300 ease-in-out md:relative md:transform-none md:z-auto
+        fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between transform transition-transform duration-300 ease-in-out md:relative md:transform-none md:z-auto
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="space-y-6">
           {/* Logo at the top of Sidebar */}
-          <div className="pb-4 border-b border-slate-100">
+          <div className="pb-4 border-b border-slate-100 dark:border-slate-800">
             <LumiereLogoHorizontal className="h-10" />
           </div>
 
@@ -141,13 +141,13 @@ export default function Layout() {
                   className={`
                     flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-200 group
                     ${active 
-                      ? 'bg-lumiere-primary/10 text-lumiere-tertiary font-bold border-l-4 border-lumiere-primary' 
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-l-4 border-transparent'
+                      ? 'bg-lumiere-primary/10 dark:bg-lumiere-primary/20 text-lumiere-tertiary font-bold border-l-4 border-lumiere-primary' 
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 border-l-4 border-transparent'
                     }
                   `}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-5 h-5 transition-transform duration-200 group-hover:scale-110 ${active ? 'text-lumiere-tertiary' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                    <Icon className={`w-5 h-5 transition-transform duration-200 group-hover:scale-110 ${active ? 'text-lumiere-tertiary' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
                     <span className="text-sm">{item.name}</span>
                   </div>
                   {active && <ChevronRight className="w-4 h-4 text-lumiere-tertiary" />}
@@ -158,14 +158,14 @@ export default function Layout() {
         </div>
 
         {/* User Card & Logout */}
-        <div className="space-y-3 pt-4 border-t border-slate-100">
+        <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3 px-2">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-lumiere-primary to-lumiere-tertiary flex items-center justify-center text-sm font-semibold uppercase text-white shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-linear-to-tr from-lumiere-primary to-lumiere-tertiary flex items-center justify-center text-sm font-semibold uppercase text-white shadow-sm">
               {userName.substring(0, 2)}
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-slate-800 truncate">{userName}</p>
-              <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{userName}</p>
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Online
               </p>
@@ -174,9 +174,9 @@ export default function Layout() {
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-200 border border-transparent"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 rounded-xl transition-all duration-200 border border-transparent"
           >
-            <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-650" />
+            <LogOut className="w-5 h-5 text-slate-400 dark:text-slate-500 group-hover:text-red-650" />
             <span className="text-sm font-medium">Sair da usina</span>
           </button>
         </div>
@@ -185,30 +185,30 @@ export default function Layout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navbar */}
-        <header className="hidden md:flex items-center justify-between px-8 py-4 border-b border-slate-200 bg-white shadow-sm sticky top-0 z-40">
+        <header className="hidden md:flex items-center justify-between px-8 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm sticky top-0 z-40">
           <div className="flex items-center gap-4">
             <LumiereLogoHorizontal className="h-9" />
           </div>
           
           <div className="flex items-center gap-4">
             {/* Notifications Button */}
-            <button className="p-2 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all relative">
+            <button className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-all relative">
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-lumiere-secondary ring-2 ring-white" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-lumiere-secondary ring-2 ring-white dark:ring-slate-900" />
             </button>
             
             {/* Settings Button */}
-            <Link to="/dashboard/settings" className="p-2 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all">
+            <Link to="/dashboard/settings" className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-all">
               <Settings className="w-5 h-5" />
             </Link>
 
-            <div className="h-6 w-px bg-slate-200" />
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
 
             {/* User Profile Info & Photo */}
             <Link to="/dashboard/profile" className="flex items-center gap-2.5 hover:opacity-90 group transition-opacity">
               <div className="text-right">
-                <span className="text-sm font-bold text-slate-700 block group-hover:text-lumiere-tertiary">{userName}</span>
-                <span className="text-[10px] text-slate-400 block -mt-0.5">{userEmail}</span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 block group-hover:text-lumiere-tertiary">{userName}</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block -mt-0.5">{userEmail}</span>
               </div>
               <div className="w-9 h-9 rounded-full bg-lumiere-primary/20 text-lumiere-tertiary border border-lumiere-primary/30 flex items-center justify-center font-bold text-sm">
                 {userName.substring(0, 2).toUpperCase()}
