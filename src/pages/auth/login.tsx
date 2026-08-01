@@ -141,9 +141,9 @@ export default function Login() {
                 Lembrar-me
               </label>
 
-              <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link to="/recover-password" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Esqueci minha senha
-              </a>
+              </Link>
             </div>  
 
             <button

@@ -3,10 +3,8 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Sun,
-  Zap,
   History, 
   BarChart3,
-  Wrench,
   User, 
   Settings, 
   LogOut, 
@@ -88,10 +86,8 @@ export default function Layout() {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Minha Usina', path: '/dashboard/usina', icon: Sun },
-    { name: 'Consumo', path: '/dashboard/consumo', icon: Zap },
     { name: 'Histórico', path: '/dashboard/history', icon: History },
     { name: 'Relatórios', path: '/dashboard/relatorios', icon: BarChart3 },
-    { name: 'Manutenção', path: '/dashboard/manutencao', icon: Wrench },
     { name: 'Perfil', path: '/dashboard/profile', icon: User },
     { name: 'Configurações', path: '/dashboard/settings', icon: Settings },
   ];
@@ -136,7 +132,7 @@ export default function Layout() {
               return (
                 <Link
                   key={item.path}
-                  to={item.path === '/dashboard/usina' || item.path === '/dashboard/consumo' || item.path === '/dashboard/relatorios' || item.path === '/dashboard/manutencao' ? '#' : item.path}
+                  to={item.path === '/dashboard/consumo' || item.path === '/dashboard/relatorios' || item.path === '/dashboard/manutencao' ? '#' : item.path}
                   onClick={() => setMobileMenuOpen(false)}
                   className={`
                     flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-200 group

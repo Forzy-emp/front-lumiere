@@ -5,10 +5,16 @@ import Layout from '../components/Layout';
 // Lazy load or import directly since they are page components
 import Login from '../pages/auth/login';
 import Register from '../pages/auth/register';
+import RecoverPassword from '../pages/auth/recoverPassword';
+import Validation from '../pages/auth/validation';
+import NewPassword from '../pages/auth/newPassword';
 import Home from '../pages/dashboard/home';
 import History from '../pages/dashboard/history';
 import Profile from '../pages/user/profile';
 import Settings from '../pages/user/settings';
+import MySolarPlant from '../pages/dashboard/mySolarPlant';
+import RegisterNewSolarPowerPlant from '../pages/dashboard/solarplants/registerNewSolarPowerPlant';
+import SolarPlantInformation from '../pages/dashboard/solarplants/Information';
 
 // Protected Route Guard Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -36,6 +42,18 @@ export const router = createBrowserRouter([
     element: <Register />,
   },
   {
+    path: '/recover-password',
+    element: <RecoverPassword />,
+  },
+  {
+    path: '/validation',
+    element: <Validation />,
+  },
+  {
+    path: '/new-password',
+    element: <NewPassword />,
+  },
+  {
     path: '/dashboard',
     element: (
       <ProtectedRoute>
@@ -50,6 +68,18 @@ export const router = createBrowserRouter([
       {
         path: 'history',
         element: <History />,
+      },
+      {
+        path: 'usina',
+        element: <MySolarPlant />,
+      },
+      {
+        path: 'usina/new',
+        element: <RegisterNewSolarPowerPlant />,
+      },
+      {
+        path: 'usina/info/:id',
+        element: <SolarPlantInformation />,
       },
       {
         path: 'profile',
