@@ -1,21 +1,22 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowRight, 
-  Check, 
-  ChevronLeft, 
-  Camera, 
-  Trash2, 
-  Sun, 
-  Home, 
-  Eye, 
-  EyeOff, 
-  Lock, 
-  Mail, 
-  Smartphone, 
-  MapPin, 
-  User 
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  Camera,
+  Trash2,
+  Sun,
+  Home,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Smartphone,
+  MapPin,
+  User
 } from 'lucide-react';
+import { RegisterUser } from '../../service/auth';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export default function Register() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
-  
+
   // Custom states: User Role & Optional Photo
   const [userRole, setUserRole] = useState<'dono' | 'beneficiario'>('beneficiario');
   const [photo, setPhoto] = useState<File | null>(null);
@@ -70,35 +71,56 @@ export default function Register() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+
+    setError("");
 
     if (!name || !phone || !email || !password || !city || !state) {
-      setError('Por favor, preencha todos os campos obrigatórios.');
+      setError("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
 
     if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.');
+      setError("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
 
     if (!acceptTerms) {
-      setError('Você precisa aceitar os termos de serviço e a política de privacidade.');
+      setError("Você precisa aceitar os termos.");
       return;
     }
 
     setLoading(true);
 
-    // Simulate registration saving
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await RegisterUser({
+        name,
+        email,
+        senhaHash: password,
+
+        // remove máscara do telefone
+        telefone: phone.replace(/\D/g, ""),
+
+        cidade: city,
+        estado: state,
+
+        // Beneficiário = 1
+        // Dono = 2
+        type: userRole === "beneficiario" ? 1 : 2,
+      });
+
       setSuccess(true);
+
       setTimeout(() => {
-        navigate('/login');
+        navigate("/login");
       }, 1500);
-    }, 1200);
+
+    } catch (error: any) {
+      setError(error.response?.data?.message ?? "Erro ao criar conta.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -153,7 +175,7 @@ export default function Register() {
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 text-center">
                   Foto de Perfil (Opcional)
                 </label>
-                
+
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -162,15 +184,15 @@ export default function Register() {
                   className="hidden"
                 />
 
-                <div 
+                <div
                   onClick={handlePhotoClick}
                   className="group relative w-24 h-24 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-center cursor-pointer overflow-hidden hover:border-blue-500 transition-colors duration-200"
                 >
                   {photoPreview ? (
                     <>
-                      <img 
-                        src={photoPreview} 
-                        alt="Preview" 
+                      <img
+                        src={photoPreview}
+                        alt="Preview"
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -207,22 +229,20 @@ export default function Register() {
                   {/* Beneficiário Card */}
                   <div
                     onClick={() => setUserRole('beneficiario')}
-                    className={`relative p-4 rounded-xl border-2 flex flex-col items-center text-center cursor-pointer transition-all duration-200 ${
-                      userRole === 'beneficiario'
+                    className={`relative p-4 rounded-xl border-2 flex flex-col items-center text-center cursor-pointer transition-all duration-200 ${userRole === 'beneficiario'
                         ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
                         : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
+                      }`}
                   >
                     {userRole === 'beneficiario' && (
                       <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white">
                         <Check className="w-3 h-3 stroke-[3]" />
                       </div>
                     )}
-                    <div className={`p-3 rounded-full mb-3 ${
-                      userRole === 'beneficiario'
+                    <div className={`p-3 rounded-full mb-3 ${userRole === 'beneficiario'
                         ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                    }`}>
+                      }`}>
                       <Home className="w-6 h-6" />
                     </div>
                     <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
@@ -236,22 +256,20 @@ export default function Register() {
                   {/* Dono de Usina Card */}
                   <div
                     onClick={() => setUserRole('dono')}
-                    className={`relative p-4 rounded-xl border-2 flex flex-col items-center text-center cursor-pointer transition-all duration-200 ${
-                      userRole === 'dono'
+                    className={`relative p-4 rounded-xl border-2 flex flex-col items-center text-center cursor-pointer transition-all duration-200 ${userRole === 'dono'
                         ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
                         : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
+                      }`}
                   >
                     {userRole === 'dono' && (
                       <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white">
                         <Check className="w-3 h-3 stroke-[3]" />
                       </div>
                     )}
-                    <div className={`p-3 rounded-full mb-3 ${
-                      userRole === 'dono'
+                    <div className={`p-3 rounded-full mb-3 ${userRole === 'dono'
                         ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                    }`}>
+                      }`}>
                       <Sun className="w-6 h-6" />
                     </div>
                     <span className="font-bold text-sm text-slate-800 dark:text-slate-100">

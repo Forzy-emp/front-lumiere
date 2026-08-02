@@ -17,8 +17,8 @@ import {
   AlertOctagon,
   Wrench
 } from 'lucide-react';
-import { GetUsinaId } from '../../../service/usina';
-
+import { GetUsinaId, RegisterProducao, RegisterManutencao, ToggleStatusUsina, UpdateUsina } from '../../../service/usina';
+import { RegisterAssociado, UpdateAssociado } from '../../../service/associado';
 interface Beneficiary {
   id: string;
   name: string;
@@ -28,11 +28,13 @@ interface Beneficiary {
 
 interface Plant {
   maintenanceHistory: any;
-  id: string;
+  id: number;
   name: string;
   cep: string;
   address: string;
   panelsCount: number;
+  state: string;
+  city: string
   lastMonthProduction: number;
   lastMonthProductionAnterior?: number;
   lastMonthFaturamento?: number;
@@ -101,6 +103,9 @@ export default function SolarPlantInformation() {
     const loadUsina = async () => {
       try {
         const response = await GetUsinaId(Number(id));
+
+        console.log("teste1", response.associado);
+
         console.log('teste', response);
         if (!response) {
           navigate("/dashboard/usina");
@@ -117,10 +122,23 @@ export default function SolarPlantInformation() {
           status: response.status ? "ativo" : "inativo",
           beneficiariesLimit: response.limite_beneficiarios,
           sunExposure: response.exposicao_solar_diaria,
+          city: response.cidade,
+          state: response.estado,
           installationDate: response.data_instalacao,
           lastMaintenanceDate: response.data_ultima_manutencao,
-          beneficiaries: response.associado ?? [],
-          maintenanceHistory: response.manutencao ?? [],
+          beneficiaries: response.associado.map((a: any) => ({
+            id: a.id,
+            name: a.User?.name ?? "",
+            email: a.User?.email ?? "",
+            percent: a.credito,
+          })),
+          maintenanceHistory: (response.manutencao ?? []).map((m: any) => ({
+            id: m.id,
+            date: m.data_manutencao,
+            time: m.horas_manutencao,
+            performedBy: m.empresa_manutencao ? "company" : "self",
+            companyName: m.nome_empresa,
+          })),
         });
       } catch (err) {
         console.error(err);
@@ -136,7 +154,8 @@ export default function SolarPlantInformation() {
   const savePlantsList = (updatedList: Plant[]) => {
     setPlants(updatedList);
     localStorage.setItem('solarPlants', JSON.stringify(updatedList));
-    const found = updatedList.find(p => p.id === id);
+    const idNumber = Number(id);
+    const found = updatedList.find(p => p.id === idNumber);
     if (found) {
       setPlant(found);
     }
@@ -151,20 +170,28 @@ export default function SolarPlantInformation() {
   };
 
   // Toggle status
-  const handleToggleStatus = () => {
+  const handleToggleStatus = async () => {
     if (!plant) return;
-    const updated = plants.map(p => {
-      if (p.id === plant.id) {
-        return {
-          ...p,
-          status: p.status === 'ativo' ? 'inativo' : 'ativo' as 'ativo' | 'inativo'
-        };
-      }
-      return p;
-    });
-    savePlantsList(updated);
-    triggerToast(`Status da usina atualizado com sucesso!`);
+
+    try {
+      const response = await ToggleStatusUsina(Number(plant.id));
+
+      setPlant(prev =>
+        prev
+          ? {
+            ...prev,
+            status: response.status ? "ativo" : "inativo",
+          }
+          : null
+      );
+
+      triggerToast("Status da usina atualizado com sucesso!");
+    } catch (err) {
+      console.error(err);
+      triggerToast("Erro ao atualizar o status da usina.", "error");
+    }
   };
+
 
   // Maintenance and Date Utilities
   const getMonthsSince = (dateStr: string) => {
@@ -198,49 +225,75 @@ export default function SolarPlantInformation() {
     setIsMaintenanceModalOpen(true);
   };
 
-  const handleMaintenanceSubmit = (e: React.FormEvent) => {
+  const handleMaintenanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!plant) return;
-    setMaintError('');
 
     if (!maintDate || !maintTime) {
-      setMaintError('Data e hora são campos obrigatórios.');
+      setMaintError("Informe a data e a hora da manutenção.");
       return;
     }
 
-    if (maintPerformedBy === 'company' && !maintCompanyName.trim()) {
-      setMaintError('Por favor, informe o nome da empresa terceirizada.');
+    if (
+      maintPerformedBy === "company" &&
+      maintCompanyName.trim() === ""
+    ) {
+      setMaintError("Informe o nome da empresa.");
       return;
     }
 
-    setMaintLoading(true);
+    try {
+      // Junta a data e a hora em um Date
 
-    setTimeout(() => {
-      const newLog = {
-        id: String(Date.now()),
-        date: maintDate,
-        time: maintTime,
-        performedBy: maintPerformedBy,
-        companyName: maintPerformedBy === 'company' ? maintCompanyName.trim() : undefined
-      };
+      const dataHora = new Date(`${maintDate}T${maintTime}:00`);
 
-      const updated = plants.map(p => {
-        if (p.id === plant.id) {
-          const history = p.maintenanceHistory ? [...p.maintenanceHistory, newLog] : [newLog];
-          return {
-            ...p,
-            lastMaintenanceDate: maintDate,
-            maintenanceHistory: history
-          };
-        }
-        return p;
+      await RegisterManutencao(plant.id, {
+        dataManutencao: dataHora.toISOString(),
+        horasManutencao: maintTime,
+        empresaManutencao: maintPerformedBy === "company",
+        nomeEmpresa:
+          maintPerformedBy === "company"
+            ? maintCompanyName
+            : null,
+      });
+      triggerToast("Manutenção registrada com sucesso!", "success");
+
+      // Atualiza a usina
+      const response = await GetUsinaId(Number(plant.id));
+
+      setPlant({
+        id: response.id,
+        name: response.name,
+        cep: response.cep,
+        address: `${response.logradouro}, ${response.numero} - ${response.bairro}`,
+        panelsCount: response.qtd_placas,
+        lastMonthProduction: response.geracao_mes_anterior,
+        status: response.status ? "ativo" : "inativo",
+        beneficiariesLimit: response.limite_beneficiarios,
+        sunExposure: response.exposicao_solar_diaria,
+        installationDate: response.data_instalacao,
+        city: response.cidade,
+        state: response.estado,
+        lastMaintenanceDate: response.data_ultima_manutencao,
+        beneficiaries: response.associado ?? [],
+        maintenanceHistory: response.manutencao ?? [],
       });
 
-      savePlantsList(updated);
-      setMaintLoading(false);
       setIsMaintenanceModalOpen(false);
-      triggerToast('Manutenção registrada com sucesso!');
-    }, 900);
+
+      // Limpa os campos
+      setMaintDate('');
+      setMaintTime('');
+      setMaintPerformedBy('self');
+      setMaintCompanyName('');
+
+    } catch (error) {
+      console.error(error);
+      setMaintError("Erro ao registrar manutenção.");
+    } finally {
+      setMaintLoading(false);
+    }
   };
 
   const handleOpenEditPlantModal = () => {
@@ -256,40 +309,58 @@ export default function SolarPlantInformation() {
     setIsEditPlantModalOpen(true);
   };
 
-  const handleEditPlantSubmit = (e: React.FormEvent) => {
+  const handleEditPlantSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!plant) return;
 
-    if (!editName || !editCep || !editAddress || !editPanelsCount || !editInstallationDate || !editLastMaintenanceDate) {
-      triggerToast('Por favor, preencha todos os campos obrigatórios para editar a usina.', 'error');
-      return;
-    }
+    try {
+      setEditLoading(true);
 
-    setEditLoading(true);
+      // Separar endereço
+      const [logradouroNumero, bairro] = editAddress.split(" - ");
+      const [logradouro, numero] = logradouroNumero.split(",");
 
-    setTimeout(() => {
-      const updated = plants.map(p => {
-        if (p.id === plant.id) {
-          return {
-            ...p,
-            name: editName,
-            cep: editCep,
-            address: editAddress,
-            panelsCount: Number(editPanelsCount),
-            sunExposure: editSunExposure === '' ? undefined : Number(editSunExposure),
-            beneficiariesLimit: editBeneficiariesLimit === '' ? undefined : Number(editBeneficiariesLimit),
-            installationDate: editInstallationDate,
-            lastMaintenanceDate: editLastMaintenanceDate
-          };
-        }
-        return p;
+      await UpdateUsina(Number(plant.id), {
+        name: editName,
+        cep: editCep,
+        logradouro: logradouro.trim(),
+        numero: numero.trim(),
+        bairro: bairro.trim(),
+        cidade: plant.city,
+        estado: plant.state,
+        qtd_placas: Number(editPanelsCount),
+        exposicao_solar_diaria: Number(editSunExposure),
+        limite_beneficiarios: Number(editBeneficiariesLimit),
+        data_instalacao: editInstallationDate,
+        data_ultima_manutencao: editLastMaintenanceDate,
       });
 
-      savePlantsList(updated);
-      setEditLoading(false);
+      triggerToast("Usina atualizada com sucesso!");
+
       setIsEditPlantModalOpen(false);
-      triggerToast('Dados da usina editados com sucesso!');
-    }, 900);
+
+      // Recarrega os dados
+      const response = await GetUsinaId(Number(plant.id));
+
+      setPlant({
+        ...plant,
+        name: response.name,
+        cep: response.cep,
+        address: `${response.logradouro}, ${response.numero} - ${response.bairro}`,
+        panelsCount: response.qtd_placas,
+        beneficiariesLimit: response.limite_beneficiarios,
+        sunExposure: response.exposicao_solar_diaria,
+        installationDate: response.data_instalacao,
+        lastMaintenanceDate: response.data_ultima_manutencao,
+      });
+
+    } catch (err) {
+      console.error(err);
+      triggerToast("Erro ao atualizar usina", "error");
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   // 1. Reading Form Handler (Novo Registro)
@@ -299,8 +370,9 @@ export default function SolarPlantInformation() {
     setIsReadingModalOpen(true);
   };
 
-  const handleReadingSubmit = (e: React.FormEvent) => {
+  const handleReadingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!plant) return;
 
     if (newGeneration === '') {
@@ -308,39 +380,48 @@ export default function SolarPlantInformation() {
       return;
     }
 
-    setReadingLoading(true);
+    try {
+      setReadingLoading(true);
 
-    setTimeout(() => {
-      const updatedGen = Number(newGeneration);
-      const updatedCon = newConsumption === '' ? 0 : Number(newConsumption);
+      await RegisterProducao(
+        Number(plant.id),
+        Number(newGeneration),
+        Number(newConsumption || 0)
+      );
 
-      const updated = plants.map(p => {
-        if (p.id === plant.id) {
-          // Recalculate faturamento, saldo, economia, energia enviada
-          const defaultFaturamento = updatedGen * 2.3;
-          const defaultSaldo = Math.max(0, updatedGen - updatedCon) * 1.15;
-          const defaultEnviada = updatedGen * 15.4;
-          const defaultEconomia = updatedGen * 9.9;
+      triggerToast("Leitura registrada com sucesso!", "success");
 
-          return {
-            ...p,
-            lastMonthProductionAnterior: p.lastMonthProduction,
-            lastMonthProduction: updatedGen,
-            lastMonthFaturamentoAnterior: p.lastMonthFaturamento,
-            lastMonthFaturamento: defaultFaturamento,
-            saldoRede: (p.saldoRede ?? 0) + defaultSaldo, // Accumulate credit balance
-            energiaEnviada: (p.energiaEnviada ?? 0) + updatedGen, // Accumulate injected energy
-            economiaAcumulada: (p.economiaAcumulada ?? 0) + defaultEconomia // Accumulate savings
-          };
-        }
-        return p;
+      setIsReadingModalOpen(false);
+      setNewGeneration('');
+      setNewConsumption('');
+
+      // Atualiza os dados da usina
+      const response = await GetUsinaId(Number(plant.id));
+
+      setPlant({
+        id: response.id,
+        name: response.name,
+        cep: response.cep,
+        address: `${response.logradouro}, ${response.numero} - ${response.bairro}`,
+        panelsCount: response.qtd_placas,
+        lastMonthProduction: response.geracao_mes_anterior,
+        status: response.status ? "ativo" : "inativo",
+        beneficiariesLimit: response.limite_beneficiarios,
+        city: response.cidade,
+        state: response.estado,
+        sunExposure: response.exposicao_solar_diaria,
+        installationDate: response.data_instalacao,
+        lastMaintenanceDate: response.data_ultima_manutencao,
+        beneficiaries: response.associado ?? [],
+        maintenanceHistory: response.manutencao ?? [],
       });
 
-      savePlantsList(updated);
+    } catch (error) {
+      console.error(error);
+      triggerToast("Erro ao registrar leitura.", "error");
+    } finally {
       setReadingLoading(false);
-      setIsReadingModalOpen(false);
-      triggerToast('Nova leitura de geração registrada e agregada com sucesso!');
-    }, 900);
+    }
   };
 
   // 2. Beneficiaries Form Handlers
@@ -362,64 +443,108 @@ export default function SolarPlantInformation() {
     setIsBeneficiaryModalOpen(true);
   };
 
-  const handleBeneficiarySubmit = (e: React.FormEvent) => {
+  const handleBeneficiarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!plant) return;
 
-    if (!benName || !benEmail || benPercent === '') {
-      setBenError('Por favor, preencha todos os campos do formulário.');
+    if (!benName || !benEmail || benPercent === "") {
+      setBenError("Por favor, preencha todos os campos do formulário.");
       return;
     }
 
     const percentVal = Number(benPercent);
+
     if (percentVal <= 0 || percentVal > 100) {
-      setBenError('A alocação deve ser um valor de 1% a 100%.');
+      setBenError("A alocação deve ser um valor de 1% a 100%.");
       return;
     }
 
-    // Exceeded Limit check
-    if (plant.beneficiariesLimit && !benId && plant.beneficiaries.length >= plant.beneficiariesLimit) {
-      setBenError(`Limite de beneficiários da usina (${plant.beneficiariesLimit}) atingido.`);
+    if (
+      plant.beneficiariesLimit &&
+      !benId &&
+      plant.beneficiaries.length >= plant.beneficiariesLimit
+    ) {
+      setBenError(
+        `Limite de beneficiários da usina (${plant.beneficiariesLimit}) atingido.`
+      );
       return;
     }
 
-    // Credits validation
     const currentAllocationTotal = plant.beneficiaries
-      .filter(b => b.id !== benId)
+      .filter((b) => b.id !== benId)
       .reduce((sum, b) => sum + b.percent, 0);
 
     if (currentAllocationTotal + percentVal > 100) {
-      setBenError(`Limite de alocação de créditos excedido. Disponível: ${100 - currentAllocationTotal}%.`);
+      setBenError(
+        `Limite de alocação de créditos excedido. Disponível: ${100 - currentAllocationTotal
+        }%.`
+      );
       return;
     }
 
-    // Process Add / Edit
-    const updated = plants.map(p => {
-      if (p.id === plant.id) {
-        let newList = [...p.beneficiaries];
-        if (benId) {
-          // Edit
-          newList = newList.map(b => b.id === benId ? { ...b, name: benName, email: benEmail, percent: percentVal } : b);
-        } else {
-          // Add new
-          newList.push({
-            id: String(Date.now()),
-            name: benName,
-            email: benEmail,
-            percent: percentVal
-          });
-        }
-        return {
-          ...p,
-          beneficiaries: newList
-        };
-      }
-      return p;
-    });
+    try {
+      setBenError("");
 
-    savePlantsList(updated);
-    setIsBeneficiaryModalOpen(false);
-    triggerToast(benId ? 'Beneficiário atualizado!' : 'Novo beneficiário adicionado!');
+      if (benId) {
+        // Editar
+        await UpdateAssociado(Number(benId), percentVal);
+
+        triggerToast("Beneficiário atualizado com sucesso!");
+      } else {
+        // Cadastrar
+        await RegisterAssociado(
+          Number(plant.id),
+          benEmail,
+          percentVal
+        );
+
+        triggerToast("Beneficiário cadastrado com sucesso!");
+      }
+
+      // Recarrega a usina
+      const response = await GetUsinaId(Number(plant.id));
+
+      setPlant({
+        id: response.id,
+        name: response.name,
+        cep: response.cep,
+        address: `${response.logradouro}, ${response.numero} - ${response.bairro}`,
+        panelsCount: response.qtd_placas,
+        lastMonthProduction: response.geracao_mes_anterior,
+        status: response.status ? "ativo" : "inativo",
+        beneficiariesLimit: response.limite_beneficiarios,
+        sunExposure: response.exposicao_solar_diaria,
+        city: response.cidade,
+        state: response.estado,
+        installationDate: response.data_instalacao,
+        lastMaintenanceDate: response.data_ultima_manutencao,
+
+        beneficiaries: response.associado.map((a: any) => ({
+          id: a.id,
+          name: a.User.name,
+          email: a.User.email,
+          percent: a.credito,
+        })),
+
+        maintenanceHistory: response.manutencao?.map((m: any) => ({
+          id: m.id,
+          date: m.data_manutencao,
+          time: m.horas_manutencao,
+          performedBy: m.empresa_manutencao ? "company" : "self",
+          companyName: m.nome_empresa,
+        })) ?? [],
+      });
+
+      setIsBeneficiaryModalOpen(false);
+
+      setBenId(null);
+      setBenName("");
+      setBenEmail("");
+      setBenPercent("");
+    } catch (err: any) {
+      setBenError(err.response?.data?.message ?? "Erro ao salvar beneficiário.");
+    }
   };
 
   const handleRemoveBeneficiary = (bId: string) => {
@@ -771,7 +896,7 @@ export default function SolarPlantInformation() {
                     {/* User profile */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center text-xs font-bold shrink-0 uppercase select-none">
-                        {b.name.substring(0, 2)}
+                        {(b.name ?? "?").substring(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{b.name}</p>
@@ -780,7 +905,7 @@ export default function SolarPlantInformation() {
                     </div>
 
                     {/* Allocated percent & actions */}
-                    <div className="flex items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-4 shrink-0" >
                       <div className="text-right">
                         <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400">{b.percent}%</span>
                         <p className="text-[8px] text-slate-400 uppercase font-semibold">Crédito</p>
@@ -827,439 +952,447 @@ export default function SolarPlantInformation() {
 
         </div>
 
-      </div>
+      </div >
 
       {/* 1. Modal: Novo Registro de Geração */}
-      {isReadingModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      {
+        isReadingModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
 
-            <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Registrar Leitura</h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">Informe os novos dados operacionais da usina.</p>
-              </div>
-              <button
-                onClick={() => setIsReadingModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleReadingSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Geração do Mês (kWh) *</label>
-                <input
-                  type="number"
-                  placeholder="Ex: 1950"
-                  value={newGeneration}
-                  onChange={(e) => setNewGeneration(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-                  Uso/Consumo Interno (kWh)
-                  <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
-                </label>
-                <input
-                  type="number"
-                  placeholder="Ex: 150 (Energia gasta localmente)"
-                  value={newConsumption}
-                  onChange={(e) => setNewConsumption(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                />
-                <span className="text-[9px] text-slate-400 block mt-1">O consumo local reduz o crédito injetado no saldo da rede.</span>
-              </div>
-
-              <div className="flex gap-2 justify-end pt-3 border-t border-slate-100 dark:border-slate-800 mt-5">
+              <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Registrar Leitura</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Informe os novos dados operacionais da usina.</p>
+                </div>
                 <button
-                  type="button"
                   onClick={() => setIsReadingModalOpen(false)}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={readingLoading}
-                  className="px-4 py-2 bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-opacity flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  {readingLoading ? (
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    'Salvar Registro'
-                  )}
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleReadingSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Geração do Mês (kWh) *</label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 1950"
+                    value={newGeneration}
+                    onChange={(e) => setNewGeneration(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
+                    Uso/Consumo Interno (kWh)
+                    <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 150 (Energia gasta localmente)"
+                    value={newConsumption}
+                    onChange={(e) => setNewConsumption(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                  />
+                  <span className="text-[9px] text-slate-400 block mt-1">O consumo local reduz o crédito injetado no saldo da rede.</span>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-3 border-t border-slate-100 dark:border-slate-800 mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setIsReadingModalOpen(false)}
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={readingLoading}
+                    className="px-4 py-2 bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-opacity flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {readingLoading ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      'Salvar Registro'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* 2. Modal: Gestão de Beneficiários */}
-      {isBeneficiaryModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      {
+        isBeneficiaryModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
 
-            <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  {benId ? 'Editar Beneficiário' : 'Adicionar Beneficiário'}
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">Destine uma fração da geração de créditos.</p>
-              </div>
-              <button
-                onClick={() => setIsBeneficiaryModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {benError && (
-              <div className="mb-4 p-2 rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs text-center font-medium">
-                {benError}
-              </div>
-            )}
-
-            <form onSubmit={handleBeneficiarySubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Nome Completo *</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Clara Mendes"
-                  value={benName}
-                  onChange={(e) => setBenName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">E-mail *</label>
-                <input
-                  type="email"
-                  placeholder="Ex: clara@email.com"
-                  value={benEmail}
-                  onChange={(e) => setBenEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1 flex justify-between">
-                  <span>Crédito Alocado (%) *</span>
-                  <span className="text-[10px] text-slate-400">Total disponível: {100 - (plant.beneficiaries.filter(b => b.id !== benId).reduce((sum, b) => sum + b.percent, 0))}%</span>
-                </label>
-                <input
-                  type="number"
-                  placeholder="Ex: 25"
-                  value={benPercent}
-                  onChange={(e) => setBenPercent(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                  min={1}
-                  max={100}
-                  required
-                />
-              </div>
-
-              <div className="flex gap-2 justify-end pt-3 border-t border-slate-100 dark:border-slate-800 mt-5">
+              <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    {benId ? 'Editar Beneficiário' : 'Adicionar Beneficiário'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Destine uma fração da geração de créditos.</p>
+                </div>
                 <button
-                  type="button"
                   onClick={() => setIsBeneficiaryModalOpen(false)}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-opacity cursor-pointer"
-                >
-                  {benId ? 'Salvar Alterações' : 'Adicionar Beneficiário'}
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* 3. Modal: Editar Usina */}
-      {isEditPlantModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-
-            <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                  <Edit className="w-4 h-4 text-blue-500" />
-                  Editar Informações da Usina
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">Altere as especificações técnicas e de localização da usina.</p>
-              </div>
-              <button
-                onClick={() => setIsEditPlantModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleEditPlantSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Apelido da Usina *</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">CEP *</label>
-                  <input
-                    type="text"
-                    value={editCep}
-                    onChange={(e) => setEditCep(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Endereço Completo *</label>
-                <input
-                  type="text"
-                  value={editAddress}
-                  onChange={(e) => setEditAddress(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Placas Solares *</label>
-                  <input
-                    type="number"
-                    value={editPanelsCount}
-                    onChange={(e) => setEditPanelsCount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1 flex items-center gap-0.5">
-                    Exposição (h/dia)
-                    <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={editSunExposure}
-                    onChange={(e) => setEditSunExposure(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1 flex items-center gap-0.5">
-                    Limite Clientes
-                    <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={editBeneficiariesLimit}
-                    onChange={(e) => setEditBeneficiariesLimit(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Data de Instalação *</label>
-                  <input
-                    type="date"
-                    value={editInstallationDate}
-                    onChange={(e) => setEditInstallationDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Última Manutenção *</label>
-                  <input
-                    type="date"
-                    value={editLastMaintenanceDate}
-                    onChange={(e) => setEditLastMaintenanceDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 justify-end pt-3 border-t border-slate-100 dark:border-slate-800 mt-5">
-                <button
-                  type="button"
-                  onClick={() => setIsEditPlantModalOpen(false)}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center justify-center gap-1 min-w-[100px] cursor-pointer"
-                >
-                  {editLoading ? (
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    'Salvar Alterações'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Modal: Registrar Manutenção */}
-      {isMaintenanceModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-
-            <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                  <Wrench className="w-4 h-4 text-emerald-500" />
-                  Registrar Manutenção Realizada
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">Informe as especificações e responsáveis da manutenção.</p>
-              </div>
-              <button
-                onClick={() => setIsMaintenanceModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {maintError && (
-              <div className="mb-4 p-2 rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-650 dark:text-red-400 text-xs text-center font-medium">
-                {maintError}
-              </div>
-            )}
-
-            <form onSubmit={handleMaintenanceSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Data da Manutenção *</label>
-                  <input
-                    type="date"
-                    value={maintDate}
-                    onChange={(e) => setMaintDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Hora da Manutenção *</label>
-                  <input
-                    type="time"
-                    value={maintTime}
-                    onChange={(e) => setMaintTime(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-2">Quem realizou a manutenção? *</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${maintPerformedBy === 'self'
-                    ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-500'
-                    }`}>
-                    <input
-                      type="radio"
-                      name="maintPerformedBy"
-                      value="self"
-                      checked={maintPerformedBy === 'self'}
-                      onChange={() => setMaintPerformedBy('self')}
-                      className="hidden"
-                    />
-                    <span>Eu mesmo</span>
-                  </label>
-
-                  <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${maintPerformedBy === 'company'
-                    ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-500'
-                    }`}>
-                    <input
-                      type="radio"
-                      name="maintPerformedBy"
-                      value="company"
-                      checked={maintPerformedBy === 'company'}
-                      onChange={() => setMaintPerformedBy('company')}
-                      className="hidden"
-                    />
-                    <span>Empresa</span>
-                  </label>
-                </div>
-              </div>
-
-              {maintPerformedBy === 'company' && (
-                <div className="animate-in slide-in-from-top-2 duration-200">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Nome da Empresa Prestadora *</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: SolarTech Manutenções"
-                    value={maintCompanyName}
-                    onChange={(e) => setMaintCompanyName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
-                    required={maintPerformedBy === 'company'}
-                  />
+              {benError && (
+                <div className="mb-4 p-2 rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs text-center font-medium">
+                  {benError}
                 </div>
               )}
 
-              <div className="flex gap-2 justify-end pt-3 border-t border-slate-100 dark:border-slate-800 mt-5">
+              <form onSubmit={handleBeneficiarySubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Nome Completo *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Clara Mendes"
+                    value={benName}
+                    onChange={(e) => setBenName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">E-mail *</label>
+                  <input
+                    type="email"
+                    placeholder="Ex: clara@email.com"
+                    value={benEmail}
+                    onChange={(e) => setBenEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1 flex justify-between">
+                    <span>Crédito Alocado (%) *</span>
+                    <span className="text-[10px] text-slate-400">Total disponível: {100 - (plant.beneficiaries.filter(b => b.id !== benId).reduce((sum, b) => sum + b.percent, 0))}%</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 25"
+                    value={benPercent}
+                    onChange={(e) => setBenPercent(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                    min={1}
+                    max={100}
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end pt-3 border-t border-slate-100 dark:border-slate-800 mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setIsBeneficiaryModalOpen(false)}
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-opacity cursor-pointer"
+                  >
+                    {benId ? 'Salvar Alterações' : 'Adicionar Beneficiário'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {/* 3. Modal: Editar Usina */}
+      {
+        isEditPlantModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+
+              <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <Edit className="w-4 h-4 text-blue-500" />
+                    Editar Informações da Usina
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Altere as especificações técnicas e de localização da usina.</p>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => setIsMaintenanceModalOpen(false)}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                  onClick={() => setIsEditPlantModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={maintLoading}
-                  className="px-4 py-2 bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-opacity flex items-center justify-center gap-1 min-w-[100px] cursor-pointer"
-                >
-                  {maintLoading ? (
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    'Salvar Registro'
-                  )}
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-    </div>
+              <form onSubmit={handleEditPlantSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Apelido da Usina *</label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">CEP *</label>
+                    <input
+                      type="text"
+                      value={editCep}
+                      onChange={(e) => setEditCep(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Endereço Completo *</label>
+                  <input
+                    type="text"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Placas Solares *</label>
+                    <input
+                      type="number"
+                      value={editPanelsCount}
+                      onChange={(e) => setEditPanelsCount(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1 flex items-center gap-0.5">
+                      Exposição (h/dia)
+                      <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={editSunExposure}
+                      onChange={(e) => setEditSunExposure(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1 flex items-center gap-0.5">
+                      Limite Clientes
+                      <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={editBeneficiariesLimit}
+                      onChange={(e) => setEditBeneficiariesLimit(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Data de Instalação *</label>
+                    <input
+                      type="date"
+                      value={editInstallationDate}
+                      onChange={(e) => setEditInstallationDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Última Manutenção *</label>
+                    <input
+                      type="date"
+                      value={editLastMaintenanceDate}
+                      onChange={(e) => setEditLastMaintenanceDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-3 border-t border-slate-100 dark:border-slate-800 mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditPlantModalOpen(false)}
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editLoading}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center justify-center gap-1 min-w-[100px] cursor-pointer"
+                  >
+                    {editLoading ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      'Salvar Alterações'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {/* 4. Modal: Registrar Manutenção */}
+      {
+        isMaintenanceModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+
+              <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <Wrench className="w-4 h-4 text-emerald-500" />
+                    Registrar Manutenção Realizada
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Informe as especificações e responsáveis da manutenção.</p>
+                </div>
+                <button
+                  onClick={() => setIsMaintenanceModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {maintError && (
+                <div className="mb-4 p-2 rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-650 dark:text-red-400 text-xs text-center font-medium">
+                  {maintError}
+                </div>
+              )}
+
+              <form onSubmit={handleMaintenanceSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Data da Manutenção *</label>
+                    <input
+                      type="date"
+                      value={maintDate}
+                      onChange={(e) => setMaintDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Hora da Manutenção *</label>
+                    <input
+                      type="time"
+                      value={maintTime}
+                      onChange={(e) => setMaintTime(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-2">Quem realizou a manutenção? *</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${maintPerformedBy === 'self'
+                      ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold'
+                      : 'border-slate-200 dark:border-slate-800 text-slate-500'
+                      }`}>
+                      <input
+                        type="radio"
+                        name="maintPerformedBy"
+                        value="self"
+                        checked={maintPerformedBy === 'self'}
+                        onChange={() => setMaintPerformedBy('self')}
+                        className="hidden"
+                      />
+                      <span>Eu mesmo</span>
+                    </label>
+
+                    <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${maintPerformedBy === 'company'
+                      ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold'
+                      : 'border-slate-200 dark:border-slate-800 text-slate-500'
+                      }`}>
+                      <input
+                        type="radio"
+                        name="maintPerformedBy"
+                        value="company"
+                        checked={maintPerformedBy === 'company'}
+                        onChange={() => setMaintPerformedBy('company')}
+                        className="hidden"
+                      />
+                      <span>Empresa</span>
+                    </label>
+                  </div>
+                </div>
+
+                {maintPerformedBy === 'company' && (
+                  <div className="animate-in slide-in-from-top-2 duration-200">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Nome da Empresa Prestadora *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: SolarTech Manutenções"
+                      value={maintCompanyName}
+                      onChange={(e) => setMaintCompanyName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none"
+                      required={maintPerformedBy === 'company'}
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-2 justify-end pt-3 border-t border-slate-100 dark:border-slate-800 mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setIsMaintenanceModalOpen(false)}
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={maintLoading}
+                    className="px-4 py-2 bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-opacity flex items-center justify-center gap-1 min-w-[100px] cursor-pointer"
+                  >
+                    {maintLoading ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      'Salvar Registro'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+    </div >
   );
 }

@@ -19,3 +19,19 @@ export const GetProfile = async () => {
     const { data } = await api.get("/auth/profile");
     return data;
 };
+
+export interface RegisterRequest {
+    name: string;
+    email: string;
+    senhaHash: string;
+    telefone: string;
+    cidade: string;
+    estado: string;
+    type: number;
+}
+
+export const RegisterUser = async (data: RegisterRequest) => {
+    const response = await api.post("/auth/register", data);
+
+    return response.data;
+};

@@ -70,6 +70,8 @@ export default function MySolarPlant() {
       try {
         const response = await GetMyUsinas();
 
+        console.log(response);
+        console.log(Array.isArray(response));
         const plants = response.map((u: any) => ({
           id: u.id,
           name: u.name,
