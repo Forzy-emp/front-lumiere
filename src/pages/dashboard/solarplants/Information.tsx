@@ -1,22 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ChevronLeft, 
-  Sun, 
-  MapPin, 
-  Users, 
-  BatteryCharging, 
-  Plus, 
-  Trash2, 
-  Edit, 
-  Leaf,  
-  PlusCircle, 
+import {
+  ChevronLeft,
+  Sun,
+  MapPin,
+  Users,
+  BatteryCharging,
+  Plus,
+  Trash2,
+  Edit,
+  Leaf,
+  PlusCircle,
   X,
   Check,
   AlertTriangle,
   AlertOctagon,
   Wrench
 } from 'lucide-react';
+import { GetUsinaId } from '../../../service/usina';
 
 interface Beneficiary {
   id: string;
@@ -50,20 +51,20 @@ interface Plant {
 export default function SolarPlantInformation() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [plants, setPlants] = useState<Plant[]>([]);
   const [plant, setPlant] = useState<Plant | null>(null);
-  
+
   // Modal controllers
   const [isReadingModalOpen, setIsReadingModalOpen] = useState(false);
   const [isBeneficiaryModalOpen, setIsBeneficiaryModalOpen] = useState(false);
   const [isEditPlantModalOpen, setIsEditPlantModalOpen] = useState(false);
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
-  
+
   // Toast notifications
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  
+
   // Reading Form State
   const [newGeneration, setNewGeneration] = useState<number | ''>('');
   const [newConsumption, setNewConsumption] = useState<number | ''>('');
@@ -97,22 +98,39 @@ export default function SolarPlantInformation() {
 
   // Load plants
   useEffect(() => {
-    const stored = localStorage.getItem('solarPlants');
-    if (stored) {
+    const loadUsina = async () => {
       try {
-        const parsed = JSON.parse(stored) as Plant[];
-        setPlants(parsed);
-        const found = parsed.find(p => p.id === id);
-        if (found) {
-          setPlant(found);
-        } else {
-          // If not found, go back
-          navigate('/dashboard/usina');
+        const response = await GetUsinaId(Number(id));
+        console.log('teste', response);
+        if (!response) {
+          navigate("/dashboard/usina");
+          return;
         }
-      } catch (e) {
-        console.error(e);
+
+        setPlant({
+          id: response.id,
+          name: response.name,
+          cep: response.cep,
+          address: `${response.logradouro}, ${response.numero} - ${response.bairro}`,
+          panelsCount: response.qtd_placas,
+          lastMonthProduction: response.geracao_mes_anterior,
+          status: response.status ? "ativo" : "inativo",
+          beneficiariesLimit: response.limite_beneficiarios,
+          sunExposure: response.exposicao_solar_diaria,
+          installationDate: response.data_instalacao,
+          lastMaintenanceDate: response.data_ultima_manutencao,
+          beneficiaries: response.associado ?? [],
+          maintenanceHistory: response.manutencao ?? [],
+        });
+      } catch (err) {
+        console.error(err);
+        navigate("/dashboard/usina");
       }
-    }
+
+    };
+
+    loadUsina();
+    console.log(plant);
   }, [id, navigate]);
 
   const savePlantsList = (updatedList: Plant[]) => {
@@ -171,7 +189,7 @@ export default function SolarPlantInformation() {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    
+
     setMaintDate(todayStr);
     setMaintTime(timeStr);
     setMaintPerformedBy('self');
@@ -295,7 +313,7 @@ export default function SolarPlantInformation() {
     setTimeout(() => {
       const updatedGen = Number(newGeneration);
       const updatedCon = newConsumption === '' ? 0 : Number(newConsumption);
-      
+
       const updated = plants.map(p => {
         if (p.id === plant.id) {
           // Recalculate faturamento, saldo, economia, energia enviada
@@ -440,12 +458,11 @@ export default function SolarPlantInformation() {
 
   return (
     <div className="space-y-6 animate-fade-in relative pb-10">
-      
+
       {/* Toast */}
       {toastMessage && (
-        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 ${
-          toastType === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-        }`}>
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 ${toastType === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+          }`}>
           <Check className="w-5 h-5" />
           <span className="text-sm font-bold">{toastMessage}</span>
         </div>
@@ -464,11 +481,10 @@ export default function SolarPlantInformation() {
 
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">{plant.name}</h2>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-              plant.status === 'ativo'
-                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'
-                : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
-            }`}>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${plant.status === 'ativo'
+              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'
+              : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
+              }`}>
               {plant.status === 'ativo' ? 'Ativa' : 'Inativa'}
             </span>
           </div>
@@ -489,11 +505,10 @@ export default function SolarPlantInformation() {
           </button>
           <button
             onClick={handleToggleStatus}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-              plant.status === 'ativo'
-                ? 'bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200'
-                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200'
-            }`}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${plant.status === 'ativo'
+              ? 'bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200'
+              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200'
+              }`}
           >
             {plant.status === 'ativo' ? 'Desativar Usina' : 'Ativar Usina'}
           </button>
@@ -508,10 +523,10 @@ export default function SolarPlantInformation() {
 
       {/* Main Grid: Details + Beneficiaries */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Left Side: Technical Info & Readings */}
         <div className="lg:col-span-1 space-y-6">
-          
+
           {/* Specifications */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center gap-2">
@@ -556,15 +571,14 @@ export default function SolarPlantInformation() {
             const months = getMonthsSince(plant.lastMaintenanceDate);
             const isYellow = months >= 5 && months < 6;
             const isRed = months >= 6;
-            
+
             if (plant.status !== 'ativo' || (!isYellow && !isRed)) return null;
-            
+
             return (
-              <div className={`border rounded-2xl p-5 shadow-sm space-y-3 ${
-                isRed 
-                  ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800' 
-                  : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800'
-              }`}>
+              <div className={`border rounded-2xl p-5 shadow-sm space-y-3 ${isRed
+                ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800'
+                }`}>
                 <div className="flex items-start gap-2.5">
                   {isRed ? (
                     <AlertOctagon className="w-5 h-5 text-red-500 shrink-0 mt-0.5 animate-pulse" />
@@ -576,8 +590,8 @@ export default function SolarPlantInformation() {
                       {isRed ? 'Manutenção Vencida!' : 'Manutenção Recomendada'}
                     </h4>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      {isRed 
-                        ? `Esta usina excedeu o prazo limite de 6 meses (última há ${months} meses).` 
+                      {isRed
+                        ? `Esta usina excedeu o prazo limite de 6 meses (última há ${months} meses).`
                         : `Recomenda-se realizar uma manutenção preventiva em breve (última há ${months} meses).`}
                     </p>
                   </div>
@@ -585,11 +599,10 @@ export default function SolarPlantInformation() {
 
                 <button
                   onClick={handleOpenMaintenanceModal}
-                  className={`w-full py-2.5 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.99] ${
-                    isRed
-                      ? 'bg-red-650 hover:bg-red-750 text-white shadow-sm'
-                      : 'bg-amber-550 hover:bg-amber-650 text-white shadow-sm'
-                  }`}
+                  className={`w-full py-2.5 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.99] ${isRed
+                    ? 'bg-red-650 hover:bg-red-750 text-white shadow-sm'
+                    : 'bg-amber-550 hover:bg-amber-650 text-white shadow-sm'
+                    }`}
                 >
                   <Wrench className="w-4 h-4" />
                   Registrar Nova Manutenção
@@ -610,7 +623,7 @@ export default function SolarPlantInformation() {
                 <span className="text-slate-450 dark:text-slate-400">Geração no Último Mês:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">{plant.lastMonthProduction.toLocaleString()} kWh</span>
               </div>
-              
+
               <div className="flex justify-between text-xs">
                 <span className="text-slate-450 dark:text-slate-400">Faturamento Estimado:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
@@ -622,7 +635,7 @@ export default function SolarPlantInformation() {
                 <span className="text-slate-450 dark:text-slate-400">Saldo Atual (Crédito):</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">{(plant.saldoRede ?? 0).toLocaleString()} kWh</span>
               </div>
-              
+
               <div className="flex justify-between text-xs">
                 <span className="text-slate-450 dark:text-slate-400">Economia Acumulada:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
@@ -691,10 +704,10 @@ export default function SolarPlantInformation() {
 
         {/* Right Side: Beneficiary Management */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Beneficiaries Card */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
-            
+
             {/* Beneficiaries Header */}
             <div className="flex items-center justify-between">
               <div>
@@ -720,27 +733,25 @@ export default function SolarPlantInformation() {
             <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-3">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-semibold text-slate-600 dark:text-slate-300">Créditos Totais Alocados:</span>
-                <span className={`font-bold ${
-                  currentAllocation > 100 
-                    ? 'text-red-500' 
-                    : currentAllocation === 100 
-                      ? 'text-emerald-600' 
-                      : 'text-blue-600'
-                }`}>
+                <span className={`font-bold ${currentAllocation > 100
+                  ? 'text-red-500'
+                  : currentAllocation === 100
+                    ? 'text-emerald-600'
+                    : 'text-blue-600'
+                  }`}>
                   {currentAllocation}% / 100%
                 </span>
               </div>
 
               {/* Progress bar */}
               <div className="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-300 ${
-                    currentAllocation > 100 
-                      ? 'bg-red-500' 
-                      : currentAllocation === 100 
-                        ? 'bg-emerald-500' 
-                        : 'bg-blue-500'
-                  }`}
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${currentAllocation > 100
+                    ? 'bg-red-500'
+                    : currentAllocation === 100
+                      ? 'bg-emerald-500'
+                      : 'bg-blue-500'
+                    }`}
                   style={{ width: `${Math.min(100, currentAllocation)}%` }}
                 />
               </div>
@@ -756,7 +767,7 @@ export default function SolarPlantInformation() {
               <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-150 dark:divide-slate-800">
                 {plant.beneficiaries.map((b) => (
                   <div key={b.id} className="flex justify-between items-center p-4 bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-850/50 transition-colors">
-                    
+
                     {/* User profile */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center text-xs font-bold shrink-0 uppercase select-none">
@@ -822,13 +833,13 @@ export default function SolarPlantInformation() {
       {isReadingModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            
+
             <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Registrar Leitura</h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">Informe os novos dados operacionais da usina.</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsReadingModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
               >
@@ -893,7 +904,7 @@ export default function SolarPlantInformation() {
       {isBeneficiaryModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            
+
             <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -901,7 +912,7 @@ export default function SolarPlantInformation() {
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">Destine uma fração da geração de créditos.</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsBeneficiaryModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
               >
@@ -981,7 +992,7 @@ export default function SolarPlantInformation() {
       {isEditPlantModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            
+
             <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
@@ -990,7 +1001,7 @@ export default function SolarPlantInformation() {
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">Altere as especificações técnicas e de localização da usina.</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsEditPlantModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
               >
@@ -1127,7 +1138,7 @@ export default function SolarPlantInformation() {
       {isMaintenanceModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            
+
             <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
@@ -1136,7 +1147,7 @@ export default function SolarPlantInformation() {
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">Informe as especificações e responsáveis da manutenção.</p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsMaintenanceModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
               >
@@ -1178,34 +1189,32 @@ export default function SolarPlantInformation() {
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-2">Quem realizou a manutenção? *</label>
                 <div className="grid grid-cols-2 gap-3">
-                  <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${
-                    maintPerformedBy === 'self' 
-                      ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold' 
-                      : 'border-slate-200 dark:border-slate-800 text-slate-500'
-                  }`}>
-                    <input 
-                      type="radio" 
-                      name="maintPerformedBy" 
-                      value="self" 
+                  <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${maintPerformedBy === 'self'
+                    ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-500'
+                    }`}>
+                    <input
+                      type="radio"
+                      name="maintPerformedBy"
+                      value="self"
                       checked={maintPerformedBy === 'self'}
                       onChange={() => setMaintPerformedBy('self')}
-                      className="hidden" 
+                      className="hidden"
                     />
                     <span>Eu mesmo</span>
                   </label>
 
-                  <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${
-                    maintPerformedBy === 'company' 
-                      ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold' 
-                      : 'border-slate-200 dark:border-slate-800 text-slate-500'
-                  }`}>
-                    <input 
-                      type="radio" 
-                      name="maintPerformedBy" 
-                      value="company" 
+                  <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${maintPerformedBy === 'company'
+                    ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-500'
+                    }`}>
+                    <input
+                      type="radio"
+                      name="maintPerformedBy"
+                      value="company"
                       checked={maintPerformedBy === 'company'}
                       onChange={() => setMaintPerformedBy('company')}
-                      className="hidden" 
+                      className="hidden"
                     />
                     <span>Empresa</span>
                   </label>

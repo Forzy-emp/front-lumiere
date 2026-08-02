@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { VerifyLogin } from '../../service/auth';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,23 +11,35 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+
+    setError("");
 
     if (!email || !password) {
-      setError('Por favor, preencha todos os campos.');
+      setError("Preencha todos os campos.");
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    setTimeout(() => {
+      const response = await VerifyLogin(email, password);
+
+      localStorage.setItem("token", response.access_token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      localStorage.setItem("isAuthenticated", "true");
+
+      navigate("/dashboard");
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        setError("Email ou senha inválidos.");
+      } else {
+        setError("Erro ao conectar ao servidor.");
+      }
+    } finally {
       setLoading(false);
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', email);
-      navigate('/dashboard');
-    }, 800);
+    }
   };
 
   return (
@@ -144,7 +157,7 @@ export default function Login() {
               <Link to="/recover-password" className="text-blue-600 dark:text-blue-400 hover:underline">
                 Esqueci minha senha
               </Link>
-            </div>  
+            </div>
 
             <button
               type="submit"

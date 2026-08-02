@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Sun, 
-  DollarSign, 
-  Leaf, 
-  BatteryCharging, 
-  TrendingUp, 
-  Users, 
-  ArrowUpRight, 
-  Calendar, 
+import {
+  Sun,
+  DollarSign,
+  Leaf,
+  BatteryCharging,
+  TrendingUp,
+  Users,
+  ArrowUpRight,
+  Calendar,
   ChevronRight
 } from 'lucide-react';
+import { GetUsinas } from '../../service/usina';
 
 interface Beneficiary {
   id: string;
@@ -41,82 +42,36 @@ interface Plant {
 export default function Home() {
   const [plants, setPlants] = useState<Plant[]>([]);
 
+
+
   useEffect(() => {
-    const stored = localStorage.getItem('solarPlants');
-    if (stored) {
+    const loadUsinas = async () => {
       try {
-        setPlants(JSON.parse(stored));
-      } catch (e) {
-        console.error("Error parsing solarPlants:", e);
+        const response = await GetUsinas();
+
+        const plants = response.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          cep: u.cep,
+          address: `${u.logradouro}, ${u.numero} - ${u.bairro}`,
+          panelsCount: u.qtd_placas,
+          lastMonthProduction: u.geracao_mes_anterior,
+          status: u.status ? "ativo" : "inativo",
+          beneficiariesLimit: u.limite_beneficiarios,
+          sunExposure: u.exposicao_solar_diaria,
+          installationDate: u.data_instalacao,
+          lastMaintenanceDate: u.data_ultima_manutencao,
+          beneficiaries: u.associado ?? [],
+        }));
+        setPlants(plants);
+
+
+      } catch (err) {
+        console.error(err);
       }
-    } else {
-      // Set default plants if none exist
-      const defaultPlants: Plant[] = [
-        {
-          id: "1",
-          name: "Usina Solar Lumière I",
-          cep: "01311-200",
-          address: "Av. Paulista, 1000 - Bela Vista - São Paulo - SP",
-          panelsCount: 42,
-          lastMonthProduction: 1840,
-          lastMonthProductionAnterior: 1600,
-          lastMonthFaturamento: 4250,
-          lastMonthFaturamentoAnterior: 3800,
-          saldoRede: 2120,
-          energiaEnviada: 28450,
-          economiaAcumulada: 18250,
-          status: "ativo",
-          beneficiariesLimit: 25,
-          sunExposure: 6,
-          beneficiaries: [
-            { id: "b1", name: "Ana Souza", email: "ana@email.com", percent: 30 },
-            { id: "b2", name: "Carlos Lima", email: "carlos@email.com", percent: 25 },
-            { id: "b3", name: "Mariana Santos", email: "mariana@email.com", percent: 45 }
-          ]
-        },
-        {
-          id: "2",
-          name: "Geradora Solar Pinheiros",
-          cep: "05422-010",
-          address: "Rua Pinheiros, 500 - Pinheiros - São Paulo - SP",
-          panelsCount: 24,
-          lastMonthProduction: 980,
-          lastMonthProductionAnterior: 900,
-          lastMonthFaturamento: 2260,
-          lastMonthFaturamentoAnterior: 2100,
-          saldoRede: 1050,
-          energiaEnviada: 14200,
-          economiaAcumulada: 9100,
-          status: "ativo",
-          beneficiariesLimit: 15,
-          sunExposure: 5,
-          beneficiaries: [
-            { id: "b4", name: "Pedro Alves", email: "pedro@email.com", percent: 50 },
-            { id: "b5", name: "Sofia Mendes", email: "sofia@email.com", percent: 50 }
-          ]
-        },
-        {
-          id: "3",
-          name: "Fazenda Solar Campinas",
-          cep: "13010-000",
-          address: "Av. Francisco Glicério, 200 - Centro - Campinas - SP",
-          panelsCount: 80,
-          lastMonthProduction: 3400,
-          lastMonthProductionAnterior: 3100,
-          lastMonthFaturamento: 7850,
-          lastMonthFaturamentoAnterior: 7200,
-          saldoRede: 3800,
-          energiaEnviada: 48900,
-          economiaAcumulada: 31500,
-          status: "inativo",
-          beneficiariesLimit: 50,
-          sunExposure: 7,
-          beneficiaries: []
-        }
-      ];
-      localStorage.setItem('solarPlants', JSON.stringify(defaultPlants));
-      setPlants(defaultPlants);
     }
+    loadUsinas()
+
   }, []);
 
   const activePlants = plants.filter(p => p.status === 'ativo');
@@ -124,7 +79,7 @@ export default function Home() {
   // Aggregated calculations based on active plants
   const totalGeracao = activePlants.reduce((sum, p) => sum + p.lastMonthProduction, 0);
   const totalGeracaoAnterior = activePlants.reduce((sum, p) => sum + (p.lastMonthProductionAnterior ?? p.lastMonthProduction * 0.9), 0);
-  
+
   const totalFaturamento = activePlants.reduce((sum, p) => sum + (p.lastMonthFaturamento ?? p.lastMonthProduction * 2.3), 0);
   const totalFaturamentoAnterior = activePlants.reduce((sum, p) => sum + (p.lastMonthFaturamentoAnterior ?? (p.lastMonthFaturamento ?? p.lastMonthProduction * 2.3) * 0.9), 0);
 
@@ -134,10 +89,10 @@ export default function Home() {
   const totalEnergiaEnviada = activePlants.reduce((sum, p) => sum + (p.energiaEnviada ?? 0), 0);
 
   // Evolutions
-  const geracaoDiffPct = totalGeracaoAnterior > 0 
-    ? ((totalGeracao - totalGeracaoAnterior) / totalGeracaoAnterior) * 100 
+  const geracaoDiffPct = totalGeracaoAnterior > 0
+    ? ((totalGeracao - totalGeracaoAnterior) / totalGeracaoAnterior) * 100
     : 0;
-    
+
   const faturamentoDiff = totalFaturamento - totalFaturamentoAnterior;
 
   // CO2 avoidance factor (0.3kg of CO2 per kWh)
@@ -165,7 +120,7 @@ export default function Home() {
 
   return (
     <div className="space-y-6 animate-fade-in relative pb-10">
-      
+
       {/* Welcome & Info Banner */}
       <div className="bg-linear-to-r from-[#2E5CFF] via-[#5C45FF] to-[#FF7A2F] rounded-2xl p-6 shadow-md text-white flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
@@ -199,7 +154,7 @@ export default function Home() {
 
       {/* Main Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        
+
         {/* 1. Geração de Energia */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300">
           <div className="flex justify-between items-center mb-4">
@@ -213,11 +168,10 @@ export default function Home() {
             <span className="text-sm font-medium text-slate-400 dark:text-slate-500">kWh</span>
           </div>
           <div className="flex items-center gap-1 text-xs">
-            <span className={`font-bold px-1.5 py-0.5 rounded-md ${
-              geracaoDiffPct >= 0 
-                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400' 
-                : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
-            }`}>
+            <span className={`font-bold px-1.5 py-0.5 rounded-md ${geracaoDiffPct >= 0
+              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+              : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+              }`}>
               {geracaoDiffPct >= 0 ? '+' : ''}{geracaoDiffPct.toFixed(1)}%
             </span>
             <span className="text-slate-500 dark:text-slate-400">gerado {geracaoDiffPct >= 0 ? 'mais' : 'menos'} que antes</span>
@@ -238,11 +192,10 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-1 text-xs">
-            <span className={`font-bold px-1.5 py-0.5 rounded-md ${
-              faturamentoDiff >= 0 
-                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400' 
-                : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
-            }`}>
+            <span className={`font-bold px-1.5 py-0.5 rounded-md ${faturamentoDiff >= 0
+              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+              : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+              }`}>
               {faturamentoDiff >= 0 ? '+' : ''} R$ {Math.abs(faturamentoDiff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
             <span className="text-slate-500 dark:text-slate-400">faturou {faturamentoDiff >= 0 ? 'mais' : 'menos'} que antes</span>
@@ -270,7 +223,7 @@ export default function Home() {
 
       {/* Secondary Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        
+
         {/* 4. Beneficiários */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300">
           <div className="flex justify-between items-center mb-3">

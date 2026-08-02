@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   Sun,
-  History, 
+  History,
   BarChart3,
-  User, 
-  Settings, 
-  LogOut, 
-  Menu, 
-  X, 
-  Bell, 
-  ChevronRight 
+  User,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  Bell,
+  ChevronRight
 } from 'lucide-react';
-
+import { GetProfile } from "../service/auth";
 // Lumiere Logo Component
 export function LumiereLogoHorizontal({ className = "h-8" }: { className?: string }) {
   return (
@@ -35,7 +35,7 @@ export function LumiereLogoHorizontal({ className = "h-8" }: { className?: strin
         </defs>
         {/* Sun */}
         <circle cx="45" cy="35" r="14" fill="url(#sunGradH)" />
-        
+
         {/* Swoop (orange ring) */}
         <path d="M25 105 C 55 125, 120 95, 115 45 C 110 20, 85 35, 65 55" stroke="url(#swoopGradH)" strokeWidth="4" strokeLinecap="round" fill="none" />
 
@@ -43,7 +43,7 @@ export function LumiereLogoHorizontal({ className = "h-8" }: { className?: strin
         <path d="M15 65 C25 60, 40 60, 50 65 L50 95 C40 90, 25 90, 15 95 Z" fill="url(#panelGradH)" opacity="0.9" />
         <path d="M55 66 C65 62, 80 62, 90 66 L90 96 C80 92, 65 92, 55 96 Z" fill="url(#panelGradH)" opacity="0.9" />
         <path d="M95 68 C105 65, 120 65, 130 68 L130 98 C120 95, 105 95, 95 98 Z" fill="url(#panelGradH)" opacity="0.9" />
-        
+
         {/* Solar panel grid block 2 */}
         <path d="M15 100 C25 95, 40 95, 50 100 L50 120 C40 115, 25 115, 15 120 Z" fill="url(#panelGradH)" />
         <path d="M55 101 C65 97, 80 97, 90 101 L90 121 C80 117, 65 117, 55 121 Z" fill="url(#panelGradH)" />
@@ -61,19 +61,26 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState('user@lumiere.com');
-  const [userName, setUserName] = useState('Cliente Lumière');
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
-    const email = localStorage.getItem('userEmail');
-    if (email) {
-      setUserEmail(email);
-      // Derive simple display name
-      const parts = email.split('@')[0];
-      const capitalized = parts.charAt(0).toUpperCase() + parts.slice(1);
-      setUserName(capitalized);
-    }
-  }, []);
+    const loadProfile = async () => {
+      try {
+        const user = await GetProfile();
+
+        setUserName(user.name);
+        setUserEmail(user.email);
+      } catch (err) {
+        console.error(err);
+
+        localStorage.removeItem("token");
+        navigate("/login");
+      }
+    };
+
+    loadProfile();
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
@@ -105,7 +112,7 @@ export default function Layout() {
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <LumiereLogoHorizontal className="h-9" />
-        <button 
+        <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="text-slate-600 dark:text-slate-300 hover:text-lumiere-tertiary p-1 focus:outline-none"
         >
@@ -136,8 +143,8 @@ export default function Layout() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`
                     flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-200 group
-                    ${active 
-                      ? 'bg-lumiere-primary/10 dark:bg-lumiere-primary/20 text-lumiere-tertiary font-bold border-l-4 border-lumiere-primary' 
+                    ${active
+                      ? 'bg-lumiere-primary/10 dark:bg-lumiere-primary/20 text-lumiere-tertiary font-bold border-l-4 border-lumiere-primary'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 border-l-4 border-transparent'
                     }
                   `}
@@ -185,14 +192,14 @@ export default function Layout() {
           <div className="flex items-center gap-4">
             <LumiereLogoHorizontal className="h-9" />
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* Notifications Button */}
             <button className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-all relative">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-lumiere-secondary ring-2 ring-white dark:ring-slate-900" />
             </button>
-            
+
             {/* Settings Button */}
             <Link to="/dashboard/settings" className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-all">
               <Settings className="w-5 h-5" />
@@ -221,7 +228,7 @@ export default function Layout() {
 
       {/* Backdrop for Mobile Drawer */}
       {mobileMenuOpen && (
-        <div 
+        <div
           onClick={() => setMobileMenuOpen(false)}
           className="md:hidden fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm"
         />

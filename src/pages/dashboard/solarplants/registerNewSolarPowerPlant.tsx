@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Save, MapPin } from 'lucide-react';
+import { CadUsina } from "../../../service/usina";
 
 interface Beneficiary {
     id: string;
@@ -76,7 +77,7 @@ export default function RegisterNewSolarPowerPlant() {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
@@ -87,60 +88,96 @@ export default function RegisterNewSolarPowerPlant() {
 
         setLoading(true);
 
-        setTimeout(() => {
-            // Fetch current list
-            const stored = localStorage.getItem('solarPlants');
-            let currentPlants: Plant[] = [];
-            if (stored) {
-                try {
-                    currentPlants = JSON.parse(stored);
-                } catch (err) {
-                    console.error(err);
-                }
-            }
+        const data = {
+            name,
+            cep,
+            logradouro: rua,
+            numero,
+            bairro,
+            cidade,
+            estado,
+            qtd_placas: Number(panelsCount),
+            geracao_mes_anterior: Number(lastMonthProduction || 0),
+            limite_beneficiarios: Number(beneficiariesLimit || 0),
+            exposicao_solar_diaria: Number(sunExposure || 0),
+            data_instalacao: installationDate,
+            data_ultima_manutencao:
+                lastMaintenanceDate || installationDate,
+        };
 
-            const newId = String(Date.now());
-            const fullAddress = `${rua}, ${numero ? numero : 'S/N'} - ${bairro} - ${cidade} - ${estado}`;
+        try {
+            setLoading(true);
 
-            const production = lastMonthProduction === '' ? 0 : Number(lastMonthProduction);
-            const limit = beneficiariesLimit === '' ? undefined : Number(beneficiariesLimit);
-            const sun = sunExposure === '' ? undefined : Number(sunExposure);
-            const panels = Number(panelsCount);
+            const response = await CadUsina(data);
 
-            // Default faturamento / saldo calculations to make it fully populated
-            const defaultFaturamento = production * 2.3;
-            const defaultSaldo = production * 1.15;
-            const defaultEnviada = production * 15.4;
-            const defaultEconomia = production * 9.9;
+            console.log(response);
 
-            const newPlant: Plant = {
-                id: newId,
-                name,
-                cep,
-                address: fullAddress,
-                panelsCount: panels,
-                lastMonthProduction: production,
-                lastMonthProductionAnterior: production > 0 ? Math.round(production * 0.9) : 0,
-                lastMonthFaturamento: defaultFaturamento,
-                lastMonthFaturamentoAnterior: defaultFaturamento > 0 ? Math.round(defaultFaturamento * 0.9) : 0,
-                saldoRede: defaultSaldo,
-                energiaEnviada: defaultEnviada,
-                economiaAcumulada: defaultEconomia,
-                status,
-                beneficiariesLimit: limit,
-                sunExposure: sun,
-                beneficiaries: [],
-                installationDate,
-                lastMaintenanceDate: lastMaintenanceDate || installationDate,
-                maintenanceHistory: []
-            };
+            navigate("/dashboard/usina");
+        } catch (error: any) {
+            console.error(error);
 
-            currentPlants.push(newPlant);
-            localStorage.setItem('solarPlants', JSON.stringify(currentPlants));
-
+            setError(
+                error.response?.data?.message ||
+                "Erro ao cadastrar usina."
+            );
+        } finally {
             setLoading(false);
-            navigate('/dashboard/usina');
-        }, 1000);
+        }
+
+        // setTimeout(() => {
+        //     // Fetch current list
+        //     const stored = localStorage.getItem('solarPlants');
+        //     let currentPlants: Plant[] = [];
+        //     if (stored) {
+        //         try {
+        //             currentPlants = JSON.parse(stored);
+        //         } catch (err) {
+        //             console.error(err);
+        //         }
+        //     }
+
+        //     const newId = String(Date.now());
+        //     const fullAddress = `${rua}, ${numero ? numero : 'S/N'} - ${bairro} - ${cidade} - ${estado}`;
+
+        //     const production = lastMonthProduction === '' ? 0 : Number(lastMonthProduction);
+        //     const limit = beneficiariesLimit === '' ? undefined : Number(beneficiariesLimit);
+        //     const sun = sunExposure === '' ? undefined : Number(sunExposure);
+        //     const panels = Number(panelsCount);
+
+        //     // Default faturamento / saldo calculations to make it fully populated
+        //     const defaultFaturamento = production * 2.3;
+        //     const defaultSaldo = production * 1.15;
+        //     const defaultEnviada = production * 15.4;
+        //     const defaultEconomia = production * 9.9;
+
+        //     const newPlant: Plant = {
+        //         id: newId,
+        //         name,
+        //         cep,
+        //         address: fullAddress,
+        //         panelsCount: panels,
+        //         lastMonthProduction: production,
+        //         lastMonthProductionAnterior: production > 0 ? Math.round(production * 0.9) : 0,
+        //         lastMonthFaturamento: defaultFaturamento,
+        //         lastMonthFaturamentoAnterior: defaultFaturamento > 0 ? Math.round(defaultFaturamento * 0.9) : 0,
+        //         saldoRede: defaultSaldo,
+        //         energiaEnviada: defaultEnviada,
+        //         economiaAcumulada: defaultEconomia,
+        //         status,
+        //         beneficiariesLimit: limit,
+        //         sunExposure: sun,
+        //         beneficiaries: [],
+        //         installationDate,
+        //         lastMaintenanceDate: lastMaintenanceDate || installationDate,
+        //         maintenanceHistory: []
+        //     };
+
+        //     currentPlants.push(newPlant);
+        //     localStorage.setItem('solarPlants', JSON.stringify(currentPlants));
+
+        //     setLoading(false);
+        //     navigate('/dashboard/usina');
+        // }, 1000);
     };
 
     return (

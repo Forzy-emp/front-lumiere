@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Sun, 
-  Search, 
-  SlidersHorizontal, 
-  Users, 
-  Plus, 
-  ArrowRight, 
+import {
+  Sun,
+  Search,
+  SlidersHorizontal,
+  Users,
+  Plus,
+  ArrowRight,
   BatteryCharging,
   Eye,
   AlertTriangle,
   AlertOctagon
 } from 'lucide-react';
+
+import { GetMyUsinas } from "../../service/usina";
+
 
 interface Beneficiary {
   id: string;
@@ -61,80 +64,34 @@ export default function MySolarPlant() {
     return Math.floor(diffDays / 30.4); // Average number of days in a month
   };
 
+
   useEffect(() => {
-    const stored = localStorage.getItem('solarPlants');
-    if (stored) {
+    const loadUsinas = async () => {
       try {
-        setPlants(JSON.parse(stored));
-      } catch (e) {
-        console.error("Error parsing solarPlants:", e);
+        const response = await GetMyUsinas();
+
+        const plants = response.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          cep: u.cep,
+          address: `${u.logradouro}, ${u.numero} - ${u.bairro}`,
+          panelsCount: u.qtd_placas,
+          lastMonthProduction: u.geracao_mes_anterior,
+          status: u.status ? "ativo" : "inativo",
+          beneficiariesLimit: u.limite_beneficiarios,
+          sunExposure: u.exposicao_solar_diaria,
+          installationDate: u.data_instalacao,
+          lastMaintenanceDate: u.data_ultima_manutencao,
+          beneficiaries: u.associado ?? [],
+        }));
+
+        setPlants(plants);
+      } catch (err) {
+        console.error(err);
       }
-    } else {
-      // Default plants with specific dates to trigger alerts in July 2026
-      const defaultPlants: Plant[] = [
-        {
-          id: "1",
-          name: "Usina Solar Lumière I",
-          cep: "01311-200",
-          address: "Av. Paulista, 1000 - Bela Vista - São Paulo - SP",
-          panelsCount: 42,
-          lastMonthProduction: 1840,
-          status: "ativo",
-          beneficiariesLimit: 25,
-          sunExposure: 6,
-          installationDate: "2025-06-15",
-          lastMaintenanceDate: "2026-02-20", // ~5 months ago (Yellow Alert)
-          beneficiaries: [
-            { id: "b1", name: "Ana Souza", email: "ana@email.com", percent: 30 },
-            { id: "b2", name: "Carlos Lima", email: "carlos@email.com", percent: 25 },
-            { id: "b3", name: "Mariana Santos", email: "mariana@email.com", percent: 45 }
-          ],
-          maintenanceHistory: [
-            { id: "m1", date: "2026-02-20", time: "10:30", performedBy: "company", companyName: "SolarService Ltda" }
-          ]
-        },
-        {
-          id: "2",
-          name: "Geradora Solar Pinheiros",
-          cep: "05422-010",
-          address: "Rua Pinheiros, 500 - Pinheiros - São Paulo - SP",
-          panelsCount: 24,
-          lastMonthProduction: 980,
-          status: "ativo",
-          beneficiariesLimit: 15,
-          sunExposure: 5,
-          installationDate: "2025-10-10",
-          lastMaintenanceDate: "2026-05-15", // ~2 months ago (Healthy)
-          beneficiaries: [
-            { id: "b4", name: "Pedro Alves", email: "pedro@email.com", percent: 50 },
-            { id: "b5", name: "Sofia Mendes", email: "sofia@email.com", percent: 50 }
-          ],
-          maintenanceHistory: [
-            { id: "m2", date: "2026-05-15", time: "14:15", performedBy: "self" }
-          ]
-        },
-        {
-          id: "3",
-          name: "Fazenda Solar Campinas",
-          cep: "13010-000",
-          address: "Av. Francisco Glicério, 200 - Centro - Campinas - SP",
-          panelsCount: 80,
-          lastMonthProduction: 3400,
-          status: "inativo",
-          beneficiariesLimit: 50,
-          sunExposure: 7,
-          installationDate: "2024-03-20",
-          lastMaintenanceDate: "2025-11-15", // ~8 months ago (Red Alert if active, but status is inativo)
-          beneficiaries: [],
-          maintenanceHistory: [
-            { id: "m3", date: "2025-05-10", time: "09:00", performedBy: "company", companyName: "Engenharia Sol" },
-            { id: "m4", date: "2025-11-15", time: "16:45", performedBy: "company", companyName: "TechPower" }
-          ]
-        }
-      ];
-      localStorage.setItem('solarPlants', JSON.stringify(defaultPlants));
-      setPlants(defaultPlants);
-    }
+    };
+
+    loadUsinas();
   }, []);
 
   // Filter & Search Logic
@@ -163,7 +120,7 @@ export default function MySolarPlant() {
 
   return (
     <div className="space-y-6 animate-fade-in relative pb-10">
-      
+
       {/* Header Area */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -195,7 +152,7 @@ export default function MySolarPlant() {
                 const months = getMonthsSince(p.lastMaintenanceDate);
                 return (
                   <li key={p.id} className="truncate">
-                    <span className="font-semibold text-slate-800 dark:text-slate-250">{p.name}</span> - 
+                    <span className="font-semibold text-slate-800 dark:text-slate-250">{p.name}</span> -
                     {months >= 6 ? (
                       <span className="text-red-650 dark:text-red-400 font-bold"> Manutenção vencida há {months} meses!</span>
                     ) : (
@@ -211,7 +168,7 @@ export default function MySolarPlant() {
 
       {/* Filter Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        
+
         {/* Search */}
         <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
@@ -267,18 +224,17 @@ export default function MySolarPlant() {
             return (
               <div
                 key={plant.id}
-                onClick={() => navigate(`/dashboard/usina/info/${plant.id}`)}
+                onClick={() => navigate(`/dashboard/usina/info/${plant.id}`, { state: plant })}
                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer transition-all duration-200 group flex flex-col justify-between min-h-64"
               >
                 <div>
                   {/* Header */}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        plant.status === 'ativo' 
-                          ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500' 
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${plant.status === 'ativo'
+                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                        }`}>
                         <Sun className="w-4 h-4" />
                       </div>
                       <h3 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 transition-colors text-base truncate pr-1">
@@ -286,11 +242,10 @@ export default function MySolarPlant() {
                       </h3>
                     </div>
 
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
-                      plant.status === 'ativo'
-                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'
-                        : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
-                    }`}>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${plant.status === 'ativo'
+                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'
+                      : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
+                      }`}>
                       {plant.status === 'ativo' ? 'Ativa' : 'Inativa'}
                     </span>
                   </div>
