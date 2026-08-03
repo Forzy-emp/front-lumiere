@@ -1,22 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Shield, Check, Save } from 'lucide-react';
+import { GetUserProfile } from '../../service/auth';
 
 export default function Profile() {
   const [name, setName] = useState('Admin Lumière');
   const [email, setEmail] = useState('admin@lumiere.com');
-  const role = 'Administrador';
+  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const savedEmail = localStorage.getItem('userEmail');
-    if (savedEmail) {
-      setEmail(savedEmail);
-      // Derive a simple name from email
-      const parts = savedEmail.split('@')[0];
-      const capitalized = parts.charAt(0).toUpperCase() + parts.slice(1);
-      setName(capitalized);
-    }
+    const fetchUserProfile = async () => {
+      const response = await GetUserProfile();
+      if (response) {
+        setName(response.name);
+        setEmail(response.email);
+
+        console.log("type: ", response.type);
+        if(response.type == 1) {
+          setRole("Administrador");
+        } else if(response.type == 2) {
+          setRole("Associado");
+        }
+      }
+    };
+
+    fetchUserProfile();
   }, []);
 
   const handleSave = (e: React.FormEvent) => {

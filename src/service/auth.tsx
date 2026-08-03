@@ -35,3 +35,8 @@ export const RegisterUser = async (data: RegisterRequest) => {
 
     return response.data;
 };
+
+export const GetUserProfile = async () => {
+    const { data } = await api.get("/auth/profile");
+    return data;
+}
