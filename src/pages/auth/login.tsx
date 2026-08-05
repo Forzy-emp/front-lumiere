@@ -32,8 +32,12 @@ export default function Login() {
 
       navigate("/dashboard");
     } catch (error: any) {
-      if (error.response?.status === 401) {
+      const status = error.response?.status;
+ 
+      if (status === 401) {
         setError("Email ou senha inválidos.");
+      } else if (status === 429) {
+        setError("Muitas tentativas. Tente novamente após 1 minuto.");
       } else {
         setError("Erro ao conectar ao servidor.");
       }
