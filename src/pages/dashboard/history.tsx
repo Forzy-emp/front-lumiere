@@ -2,17 +2,21 @@
 import { useState } from 'react';
 import { Search, Filter, Download, Eye } from 'lucide-react';
 
+interface Transaction {
+  id: string;
+  name: string;
+  email: string;
+  plan: string;
+  status: string;
+  amount: string;
+  date: string;
+}
+
 export default function History() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const transactions = [
-    { id: 'TX-1004', name: 'João Silva', email: 'joao.silva@email.com', plan: 'Premium', status: 'Concluído', amount: 'R$ 99,00', date: '24/07/2026' },
-    { id: 'TX-1003', name: 'Maria Souza', email: 'maria.souza@email.com', plan: 'Pro', status: 'Pendente', amount: 'R$ 49,00', date: '23/07/2026' },
-    { id: 'TX-1002', name: 'Pedro Oliveira', email: 'pedro.oliveira@email.com', plan: 'Pro', status: 'Concluído', amount: 'R$ 49,00', date: '22/07/2026' },
-    { id: 'TX-1001', name: 'Lucas Santos', email: 'lucas.santos@email.com', plan: 'Premium', status: 'Cancelado', amount: 'R$ 99,00', date: '20/07/2026' },
-    { id: 'TX-1000', name: 'Juliana Lima', email: 'juliana.lima@email.com', plan: 'Enterprise', status: 'Concluído', amount: 'R$ 299,00', date: '19/07/2026' },
-  ];
+  const transactions: Transaction[] = [];
 
   // Filtering logic
   const filteredTransactions = transactions.filter(tx => {

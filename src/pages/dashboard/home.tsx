@@ -11,7 +11,7 @@ import {
   Calendar,
   ChevronRight
 } from 'lucide-react';
-import { GetUsinas } from '../../service/usina';
+import { GetMyUsinas } from '../../service/usina';
 
 interface Beneficiary {
   id: string;
@@ -47,7 +47,7 @@ export default function Home() {
   useEffect(() => {
     const loadUsinas = async () => {
       try {
-        const response = await GetUsinas();
+        const response = await GetMyUsinas();
 
         const plants = response.map((u: any) => ({
           id: u.id,
@@ -78,10 +78,10 @@ export default function Home() {
 
   // Aggregated calculations based on active plants
   const totalGeracao = activePlants.reduce((sum, p) => sum + p.lastMonthProduction, 0);
-  const totalGeracaoAnterior = activePlants.reduce((sum, p) => sum + (p.lastMonthProductionAnterior ?? p.lastMonthProduction * 0.9), 0);
+  const totalGeracaoAnterior = activePlants.reduce((sum, p) => sum + (p.lastMonthProductionAnterior ?? 0), 0);
 
-  const totalFaturamento = activePlants.reduce((sum, p) => sum + (p.lastMonthFaturamento ?? p.lastMonthProduction * 2.3), 0);
-  const totalFaturamentoAnterior = activePlants.reduce((sum, p) => sum + (p.lastMonthFaturamentoAnterior ?? (p.lastMonthFaturamento ?? p.lastMonthProduction * 2.3) * 0.9), 0);
+  const totalFaturamento = activePlants.reduce((sum, p) => sum + (p.lastMonthFaturamento ?? 0), 0);
+  const totalFaturamentoAnterior = activePlants.reduce((sum, p) => sum + (p.lastMonthFaturamentoAnterior ?? 0), 0);
 
   const totalSaldoRede = activePlants.reduce((sum, p) => sum + (p.saldoRede ?? 0), 0);
   const totalBeneficiarios = activePlants.reduce((sum, p) => sum + p.beneficiaries.length, 0);
@@ -167,14 +167,20 @@ export default function Home() {
             <span className="text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">{totalGeracao.toLocaleString()}</span>
             <span className="text-sm font-medium text-slate-400 dark:text-slate-500">kWh</span>
           </div>
-          <div className="flex items-center gap-1 text-xs">
-            <span className={`font-bold px-1.5 py-0.5 rounded-md ${geracaoDiffPct >= 0
-              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-              : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
-              }`}>
-              {geracaoDiffPct >= 0 ? '+' : ''}{geracaoDiffPct.toFixed(1)}%
-            </span>
-            <span className="text-slate-500 dark:text-slate-400">gerado {geracaoDiffPct >= 0 ? 'mais' : 'menos'} que antes</span>
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            {totalGeracaoAnterior > 0 ? (
+              <div className="flex items-center gap-1">
+                <span className={`font-bold px-1.5 py-0.5 rounded-md ${geracaoDiffPct >= 0
+                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                  : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+                  }`}>
+                  {geracaoDiffPct >= 0 ? '+' : ''}{geracaoDiffPct.toFixed(1)}%
+                </span>
+                <span>gerado {geracaoDiffPct >= 0 ? 'mais' : 'menos'} que antes</span>
+              </div>
+            ) : (
+              <span>Total de geração cadastrada nas usinas ativas</span>
+            )}
           </div>
         </div>
 
@@ -191,14 +197,20 @@ export default function Home() {
               R$ {totalFaturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="flex items-center gap-1 text-xs">
-            <span className={`font-bold px-1.5 py-0.5 rounded-md ${faturamentoDiff >= 0
-              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-              : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
-              }`}>
-              {faturamentoDiff >= 0 ? '+' : ''} R$ {Math.abs(faturamentoDiff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
-            <span className="text-slate-500 dark:text-slate-400">faturou {faturamentoDiff >= 0 ? 'mais' : 'menos'} que antes</span>
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            {totalFaturamentoAnterior > 0 ? (
+              <div className="flex items-center gap-1">
+                <span className={`font-bold px-1.5 py-0.5 rounded-md ${faturamentoDiff >= 0
+                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                  : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+                  }`}>
+                  {faturamentoDiff >= 0 ? '+' : ''} R$ {Math.abs(faturamentoDiff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+                <span>faturou {faturamentoDiff >= 0 ? 'mais' : 'menos'} que antes</span>
+              </div>
+            ) : (
+              <span>Faturamento total acumulado das usinas</span>
+            )}
           </div>
         </div>
 

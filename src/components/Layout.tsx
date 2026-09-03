@@ -111,7 +111,7 @@ export default function Layout() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col md:flex-row font-sans transition-colors duration-200">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
-        <LumiereLogoHorizontal className="h-9" />
+        <img src="./images/lumiere.png" alt="Logo Lumiere" className="h-20"/>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="text-slate-600 dark:text-slate-300 hover:text-lumiere-tertiary p-1 focus:outline-none"
