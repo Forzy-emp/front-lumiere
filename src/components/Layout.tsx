@@ -139,7 +139,7 @@ export default function Layout() {
               return (
                 <Link
                   key={item.path}
-                  to={item.path === '/dashboard/consumo' || item.path === '/dashboard/relatorios' || item.path === '/dashboard/manutencao' ? '#' : item.path}
+                  to={item.path === '/dashboard/consumo' || item.path === '/dashboard/manutencao' ? '#' : item.path}
                   onClick={() => setMobileMenuOpen(false)}
                   className={`
                     flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-200 group

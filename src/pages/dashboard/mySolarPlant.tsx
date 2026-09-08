@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Sun,
   Search,
@@ -10,11 +10,10 @@ import {
   BatteryCharging,
   Eye,
   AlertTriangle,
-  AlertOctagon
-} from 'lucide-react';
+  AlertOctagon,
+} from "lucide-react";
 
 import { GetMyUsinas } from "../../service/usina";
-
 
 interface Beneficiary {
   id: string;
@@ -27,7 +26,7 @@ interface MaintenanceLog {
   id: string;
   date: string;
   time: string;
-  performedBy: 'self' | 'company';
+  performedBy: "self" | "company";
   companyName?: string;
 }
 
@@ -38,7 +37,7 @@ interface Plant {
   address: string;
   panelsCount: number;
   lastMonthProduction: number;
-  status: 'ativo' | 'inativo';
+  status: "ativo" | "inativo";
   beneficiariesLimit?: number;
   sunExposure?: number;
   beneficiaries: Beneficiary[];
@@ -50,9 +49,13 @@ interface Plant {
 export default function MySolarPlant() {
   const navigate = useNavigate();
   const [plants, setPlants] = useState<Plant[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'ativo' | 'inativo'>('all');
-  const [sortOrder, setSortOrder] = useState<'default' | 'highest' | 'lowest'>('default');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "ativo" | "inativo">(
+    "all",
+  );
+  const [sortOrder, setSortOrder] = useState<"default" | "highest" | "lowest">(
+    "default",
+  );
 
   // Utility to calculate months elapsed
   const getMonthsSince = (dateStr: string) => {
@@ -63,7 +66,6 @@ export default function MySolarPlant() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.floor(diffDays / 30.4); // Average number of days in a month
   };
-
 
   useEffect(() => {
     const loadUsinas = async () => {
@@ -98,36 +100,43 @@ export default function MySolarPlant() {
 
   // Filter & Search Logic
   const filteredPlants = plants
-    .filter(plant => {
-      const matchesSearch = plant.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || plant.status === statusFilter;
+    .filter((plant) => {
+      const matchesSearch = plant.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || plant.status === statusFilter;
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      if (sortOrder === 'highest') {
+      if (sortOrder === "highest") {
         return b.lastMonthProduction - a.lastMonthProduction;
       }
-      if (sortOrder === 'lowest') {
+      if (sortOrder === "lowest") {
         return a.lastMonthProduction - b.lastMonthProduction;
       }
       return 0;
     });
 
   // Consolidate maintenance alerts (only for active plants)
-  const maintenanceAlerts = plants.filter(plant => {
-    if (plant.status !== 'ativo') return false;
+  const maintenanceAlerts = plants.filter((plant) => {
+    if (plant.status !== "ativo") return false;
     const months = getMonthsSince(plant.lastMaintenanceDate);
     return months >= 5;
   });
 
   return (
     <div className="space-y-6 animate-fade-in relative pb-10">
-
       {/* Header Area */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">Minhas Usinas Solares</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Gerencie suas usinas cadastradas, consulte métricas e controle seus beneficiários.</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">
+            Minhas Usinas Solares
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Gerencie suas usinas cadastradas, consulte métricas e controle seus
+            beneficiários.
+          </p>
         </div>
         <Link
           to="/dashboard/usina/new"
@@ -136,6 +145,21 @@ export default function MySolarPlant() {
           <Plus className="w-5 h-5 stroke-[2.5]" />
           Adicionar Nova Usina
         </Link>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (plants.length === 0) {
+              return;
+            }
+
+            navigate(`/dashboard/usina/${plants[0].id}/fatura/new`);
+          }}
+          className="inline-flex h-12 items-center justify-center rounded-xl bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white px-5 font-bold shadow-md hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] transition-all shrink-0 gap-2 cursor-pointer"
+        >
+          <Plus className="w-5 h-5 stroke-[2.5]" />
+          Adicionar Nova Fatura
+        </button>
       </div>
 
       {/* Global Maintenance Alerts Panel */}
@@ -147,18 +171,29 @@ export default function MySolarPlant() {
               Atenção: Manutenção Preventiva Necessária
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              As seguintes usinas ativas necessitam de manutenção preventiva (recomendada a cada 6 meses):
+              As seguintes usinas ativas necessitam de manutenção preventiva
+              (recomendada a cada 6 meses):
             </p>
             <ul className="list-disc list-inside mt-2 text-xs text-slate-650 dark:text-slate-350 space-y-1">
-              {maintenanceAlerts.map(p => {
+              {maintenanceAlerts.map((p) => {
                 const months = getMonthsSince(p.lastMaintenanceDate);
                 return (
                   <li key={p.id} className="truncate">
-                    <span className="font-semibold text-slate-800 dark:text-slate-250">{p.name}</span> -
+                    <span className="font-semibold text-slate-800 dark:text-slate-250">
+                      {p.name}
+                    </span>{" "}
+                    -
                     {months >= 6 ? (
-                      <span className="text-red-650 dark:text-red-400 font-bold"> Manutenção vencida há {months} meses!</span>
+                      <span className="text-red-650 dark:text-red-400 font-bold">
+                        {" "}
+                        Manutenção vencida há {months} meses!
+                      </span>
                     ) : (
-                      <span className="text-amber-650 dark:text-amber-550"> Recomendado realizar manutenção preventiva (última há {months} meses).</span>
+                      <span className="text-amber-650 dark:text-amber-550">
+                        {" "}
+                        Recomendado realizar manutenção preventiva (última há{" "}
+                        {months} meses).
+                      </span>
                     )}
                   </li>
                 );
@@ -170,7 +205,6 @@ export default function MySolarPlant() {
 
       {/* Filter Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-
         {/* Search */}
         <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
@@ -212,31 +246,40 @@ export default function MySolarPlant() {
             <option value="lowest">Menor Produção</option>
           </select>
         </div>
-
       </div>
 
       {/* Plants Grid */}
       {filteredPlants.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPlants.map((plant) => {
-            const monthsSinceMaintenance = getMonthsSince(plant.lastMaintenanceDate);
-            const needsYellowAlert = monthsSinceMaintenance >= 5 && monthsSinceMaintenance < 6;
+            const monthsSinceMaintenance = getMonthsSince(
+              plant.lastMaintenanceDate,
+            );
+            const needsYellowAlert =
+              monthsSinceMaintenance >= 5 && monthsSinceMaintenance < 6;
             const needsRedAlert = monthsSinceMaintenance >= 6;
 
             return (
               <div
                 key={plant.id}
-                onClick={() => navigate(`/dashboard/usina/info/${plant.id}`, { state: plant })}
+                onClick={() =>
+                  navigate(`/dashboard/usina/info/${plant.id}`, {
+                    state: plant,
+                  })
+                }
                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer transition-all duration-200 group flex flex-col justify-between min-h-64"
               >
                 <div>
                   {/* Header */}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${plant.status === 'ativo'
-                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                        }`}>
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                          plant.status === "ativo"
+                            ? "bg-blue-50 dark:bg-blue-950/40 text-blue-500"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                        }`}
+                      >
                         <Sun className="w-4 h-4" />
                       </div>
                       <h3 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 transition-colors text-base truncate pr-1">
@@ -244,26 +287,36 @@ export default function MySolarPlant() {
                       </h3>
                     </div>
 
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${plant.status === 'ativo'
-                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'
-                      : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
-                      }`}>
-                      {plant.status === 'ativo' ? 'Ativa' : 'Inativa'}
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
+                        plant.status === "ativo"
+                          ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400"
+                          : "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400"
+                      }`}
+                    >
+                      {plant.status === "ativo" ? "Ativa" : "Inativa"}
                     </span>
                   </div>
 
                   {/* Info List */}
                   <div className="space-y-2 mt-4">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-450 dark:text-slate-400">Beneficiários:</span>
+                      <span className="text-slate-450 dark:text-slate-400">
+                        Beneficiários:
+                      </span>
                       <span className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
                         <Users className="w-3.5 h-3.5 text-slate-450" />
-                        {plant.beneficiaries.length} {plant.beneficiariesLimit ? `/ ${plant.beneficiariesLimit}` : ''}
+                        {plant.beneficiaries.length}{" "}
+                        {plant.beneficiariesLimit
+                          ? `/ ${plant.beneficiariesLimit}`
+                          : ""}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-450 dark:text-slate-400">Geração Mensal:</span>
+                      <span className="text-slate-450 dark:text-slate-400">
+                        Geração Mensal:
+                      </span>
                       <span className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
                         <BatteryCharging className="w-3.5 h-3.5 text-slate-450" />
                         {plant.lastMonthProduction.toLocaleString()} kWh
@@ -271,7 +324,9 @@ export default function MySolarPlant() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-450 dark:text-slate-400">Painéis Instalados:</span>
+                      <span className="text-slate-450 dark:text-slate-400">
+                        Painéis Instalados:
+                      </span>
                       <span className="font-bold text-slate-700 dark:text-slate-200">
                         {plant.panelsCount} placas
                       </span>
@@ -279,19 +334,25 @@ export default function MySolarPlant() {
                   </div>
 
                   {/* Maintenance Alert Badge inside the card */}
-                  {plant.status === 'ativo' && (
+                  {plant.status === "ativo" && (
                     <>
                       {needsRedAlert && (
                         <div className="mt-3 px-3 py-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-650 dark:text-red-400 rounded-xl text-[11px] font-bold flex items-center gap-1.5 animate-pulse">
                           <AlertOctagon className="w-4 h-4 text-red-500 shrink-0" />
-                          <span className="truncate">Manutenção atrasada! (há {monthsSinceMaintenance} meses)</span>
+                          <span className="truncate">
+                            Manutenção atrasada! (há {monthsSinceMaintenance}{" "}
+                            meses)
+                          </span>
                         </div>
                       )}
 
                       {needsYellowAlert && (
                         <div className="mt-3 px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-650 dark:text-amber-500 rounded-xl text-[11px] font-bold flex items-center gap-1.5">
                           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                          <span className="truncate">Manutenção necessária (há {monthsSinceMaintenance} meses)</span>
+                          <span className="truncate">
+                            Manutenção necessária (há {monthsSinceMaintenance}{" "}
+                            meses)
+                          </span>
                         </div>
                       )}
                     </>
@@ -306,7 +367,6 @@ export default function MySolarPlant() {
                   </span>
                   <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                 </div>
-
               </div>
             );
           })}
@@ -316,19 +376,25 @@ export default function MySolarPlant() {
           <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-4">
             <Sun className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Nenhuma Usina Encontrada</h3>
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+            Nenhuma Usina Encontrada
+          </h3>
           <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 mb-4 max-w-sm">
-            Nenhuma usina solar atendeu aos seus filtros ou critérios de busca informados.
+            Nenhuma usina solar atendeu aos seus filtros ou critérios de busca
+            informados.
           </p>
           <button
-            onClick={() => { setSearchTerm(''); setStatusFilter('all'); setSortOrder('default'); }}
+            onClick={() => {
+              setSearchTerm("");
+              setStatusFilter("all");
+              setSortOrder("default");
+            }}
             className="text-xs font-bold text-blue-600 hover:underline"
           >
             Limpar Filtros
           </button>
         </div>
       )}
-
     </div>
   );
 }

@@ -65,7 +65,7 @@ export interface CadastroContaEnergiaProps {
   idUsina: number;
   isOpen?: boolean;
   onClose?: () => void;
-  onSave: (dados: ContaEnergia) => void;
+  onSave: (dados: ContaEnergia) => Promise<void> | void;
 }
 
 export function CadastroContaEnergia({
@@ -178,7 +178,7 @@ export function CadastroContaEnergia({
     onClose?.();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -195,6 +195,39 @@ export function CadastroContaEnergia({
 
     if (saldoPagar === '' || saldoPagar === null || isNaN(Number(saldoPagar))) {
       setError('Por favor, informe o saldo a pagar da fatura.');
+      return;
+    }
+
+    const camposEnergiaObrigatorios = [
+      fornecidaTusdQtd,
+      fornecidaTusdPreco,
+      fornecidaTusdValor,
+
+      fornecidaTeQtd,
+      fornecidaTePreco,
+      fornecidaTeValor,
+
+      injetadaTusdQtd,
+      injetadaTusdPreco,
+      injetadaTusdValor,
+
+      injetadaTeQtd,
+      injetadaTePreco,
+      injetadaTeValor,
+    ];
+
+    if (
+      camposEnergiaObrigatorios.some(
+        (campo) =>
+          campo === '' ||
+          campo === null ||
+          isNaN(Number(campo))
+      )
+    ) {
+      setError(
+        'Preencha todos os dados de TUSD e TE fornecida e injetada.'
+      );
+
       return;
     }
 
@@ -259,9 +292,23 @@ export function CadastroContaEnergia({
       },
     };
 
-    onSave(contaEnergiaData);
-    resetForm();
-    onClose?.();
+    try {
+      await onSave(contaEnergiaData);
+
+      resetForm();
+    } catch (error: any) {
+      const mensagem =
+        error.response?.data?.message;
+
+      if (Array.isArray(mensagem)) {
+        setError(mensagem.join(' '));
+      } else {
+        setError(
+          mensagem ||
+          'Não foi possível cadastrar a fatura.'
+        );
+      }
+    }
   };
 
   return (

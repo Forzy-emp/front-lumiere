@@ -1,60 +1,66 @@
-import React from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
-import Layout from '../components/Layout';
+import React from "react";
+import { createBrowserRouter, Navigate } from "react-router-dom";
+import Layout from "../components/Layout";
 
 // Lazy load or import directly since they are page components
-import Login from '../pages/auth/login';
-import Register from '../pages/auth/register';
-import RecoverPassword from '../pages/auth/recoverPassword';
-import Validation from '../pages/auth/validation';
-import NewPassword from '../pages/auth/newPassword';
-import Home from '../pages/dashboard/home';
-import History from '../pages/dashboard/history';
-import Profile from '../pages/user/profile';
-import Settings from '../pages/user/settings';
-import MySolarPlant from '../pages/dashboard/mySolarPlant';
-import RegisterNewSolarPowerPlant from '../pages/dashboard/solarplants/registerNewSolarPowerPlant';
-import SolarPlantInformation from '../pages/dashboard/solarplants/Information';
+import Login from "../pages/auth/login";
+import Register from "../pages/auth/register";
+import RecoverPassword from "../pages/auth/recoverPassword";
+import Validation from "../pages/auth/validation";
+import NewPassword from "../pages/auth/newPassword";
+import Home from "../pages/dashboard/home";
+import History from "../pages/dashboard/history";
+import Profile from "../pages/user/profile";
+import Settings from "../pages/user/settings";
+import MySolarPlant from "../pages/dashboard/mySolarPlant";
+import RegisterNewSolarPowerPlant from "../pages/dashboard/solarplants/registerNewSolarPowerPlant";
+import SolarPlantInformation from "../pages/dashboard/solarplants/Information";
+import RegisterNewInvoice from "../pages/dashboard/invoices/registerNewInvoice";
+import Reports from "../pages/reports/reports";
 
 // Protected Route Guard Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 // Redirect to dashboard if logged in, otherwise go to login
 const HomeRedirect = () => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/login" replace />
+  );
 };
 
 export const router = createBrowserRouter([
   {
-    path: '/',
+    path: "/",
     element: <HomeRedirect />,
   },
   {
-    path: '/login',
+    path: "/login",
     element: <Login />,
   },
   {
-    path: '/register',
+    path: "/register",
     element: <Register />,
   },
   {
-    path: '/recover-password',
+    path: "/recover-password",
     element: <RecoverPassword />,
   },
   {
-    path: '/validation',
+    path: "/validation",
     element: <Validation />,
   },
   {
-    path: '/new-password',
+    path: "/new-password",
     element: <NewPassword />,
   },
   {
-    path: '/dashboard',
+    path: "/dashboard",
     element: (
       <ProtectedRoute>
         <Layout />
@@ -66,34 +72,44 @@ export const router = createBrowserRouter([
         element: <Home />,
       },
       {
-        path: 'history',
+        path: "history",
         element: <History />,
       },
       {
-        path: 'usina',
+        path: "usina",
         element: <MySolarPlant />,
       },
       {
-        path: 'usina/new',
+        path: "usina/new",
         element: <RegisterNewSolarPowerPlant />,
       },
       {
-        path: 'usina/info/:id',
+        // path: 'fatura/new',
+        path: "usina/:id/fatura/new",
+        element: <RegisterNewInvoice />,
+      },
+      {
+        path: "usina/info/:id",
         element: <SolarPlantInformation />,
       },
       {
-        path: 'profile',
+        path: "profile",
         element: <Profile />,
       },
       {
-        path: 'settings',
+        path: "settings",
         element: <Settings />,
       },
+      {
+        path: "relatorios",
+        element: <Reports />,
+      },
+      {},
     ],
   },
   // Catch-all route redirecting to home
   {
-    path: '*',
+    path: "*",
     element: <Navigate to="/" replace />,
   },
 ]);
