@@ -1,10 +1,5 @@
 
-@theme {
-  --color-lumiere-primary: #22AADA;
-  --color-lumiere-secondary: #f2a160;
-  --color-lumiere-tertiary: #054986;
-  --color-lumiere-dark: #0d0d0d;
-}
+/* Os tokens de cor ficam em index.css, junto ao import do Tailwind. */
 
 /* 
   Dicas de Cores para o Dev Júnior:

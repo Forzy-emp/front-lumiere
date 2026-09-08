@@ -122,9 +122,9 @@ export default function Home() {
     <div className="space-y-6 animate-fade-in relative pb-10">
 
       {/* Welcome & Info Banner */}
-      <div className="bg-linear-to-r from-[#2E5CFF] via-[#5C45FF] to-[#FF7A2F] rounded-2xl p-6 shadow-md text-white flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <div className="bg-linear-to-r from-[#2E5CFF] via-[#5C45FF] to-[#FF7A2F] rounded-2xl p-6 shadow-md text-white flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
             <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider">
               Dono da Conta
             </span>
@@ -153,7 +153,7 @@ export default function Home() {
       </div>
 
       {/* Main Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
 
         {/* 1. Geração de Energia */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300">
@@ -163,8 +163,8 @@ export default function Home() {
               <Sun className="w-5 h-5" />
             </div>
           </div>
-          <div className="flex items-baseline gap-1.5 mb-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">{totalGeracao.toLocaleString()}</span>
+          <div className="flex flex-wrap items-baseline gap-1.5 mb-2">
+            <span className="text-2xl xl:text-3xl break-words font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">{totalGeracao.toLocaleString()}</span>
             <span className="text-sm font-medium text-slate-400 dark:text-slate-500">kWh</span>
           </div>
           <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -192,8 +192,8 @@ export default function Home() {
               <DollarSign className="w-5 h-5" />
             </div>
           </div>
-          <div className="flex items-baseline gap-1.5 mb-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">
+          <div className="flex flex-wrap items-baseline gap-1.5 mb-2">
+            <span className="text-2xl xl:text-3xl break-words font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">
               R$ {totalFaturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -222,8 +222,8 @@ export default function Home() {
               <BatteryCharging className="w-5 h-5" />
             </div>
           </div>
-          <div className="flex items-baseline gap-1.5 mb-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">{totalSaldoRede.toLocaleString()}</span>
+          <div className="flex flex-wrap items-baseline gap-1.5 mb-2">
+            <span className="text-2xl xl:text-3xl break-words font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">{totalSaldoRede.toLocaleString()}</span>
             <span className="text-sm font-medium text-slate-400 dark:text-slate-500">kWh</span>
           </div>
           <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -234,7 +234,7 @@ export default function Home() {
       </div>
 
       {/* Secondary Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-6">
 
         {/* 4. Beneficiários */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300">

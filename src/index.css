@@ -1,2 +1,51 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-lumiere-primary: #22aada;
+  --color-lumiere-secondary: #f2a160;
+  --color-lumiere-tertiary: #054986;
+  --color-lumiere-dark: #0d0d0d;
+}
+
+@layer base {
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; min-width: 320px; }
+  button, a, input, select, textarea, summary { -webkit-tap-highlight-color: transparent; }
+  button, summary { touch-action: manipulation; }
+  button:disabled { cursor: not-allowed; }
+  .grid > *, .flex > fieldset { min-width: 0; }
+  h1, h2, h3, p { overflow-wrap: break-word; }
+}
+
+@layer components {
+  .ui-label { @apply block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2; }
+  .ui-input { @apply w-full min-w-0 min-h-11 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100; }
+  .ui-primary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] px-5 py-3 text-sm font-bold text-white shadow-sm hover:opacity-90 disabled:opacity-50; }
+  .ui-secondary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50; }
+  .invoice-section { @apply rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5; }
+  .invoice-heading { @apply flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100; }
+  .invoice-optional { @apply rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900; }
+  .invoice-optional summary { @apply cursor-pointer p-4 sm:p-5 text-sm font-semibold text-slate-700 dark:text-slate-200; }
+  .invoice-optional[open] summary { @apply border-b border-slate-100 dark:border-slate-800; }
+  .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+}
+
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid #2e5cff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+}
+@media (pointer: coarse) {
+  button, a[aria-label], summary { min-height: 44px; min-width: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

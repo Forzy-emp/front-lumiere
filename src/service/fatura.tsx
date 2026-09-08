@@ -57,13 +57,33 @@ export interface CreateFaturaRequest {
   itens: FaturaItemRequest[];
 }
 
-export const RegisterFatura = async (data: CreateFaturaRequest) => {
+export type FaturaInicialRequest = Omit<CreateFaturaRequest, "usinaId">;
+
+export interface Fatura {
+  id: number;
+  usinaId: number;
+  competencia: string;
+  vencimento: string;
+  valor_total: string | number;
+  saldo_creditos_kwh: string | number | null;
+  creditos_recebidos_kwh: string | number | null;
+  participacao_saldo_percentual: string | number | null;
+  saldo_total_creditos_kwh: string | number | null;
+  fatura_item?: Array<{
+    id: number;
+    tipo: string;
+    quantidade: string | number | null;
+    valor: string | number;
+  }>;
+}
+
+export const RegisterFatura = async (data: CreateFaturaRequest): Promise<Fatura> => {
   const response = await api.post("/faturas", data);
 
   return response.data;
 };
 
-export const GetFaturas = async () => {
+export const GetFaturas = async (): Promise<Fatura[]> => {
   const response = await api.get("/faturas");
 
   return response.data;

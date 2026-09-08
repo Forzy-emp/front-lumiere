@@ -16,7 +16,7 @@ export default function Settings() {
 
       <div className="space-y-6">
         {/* Preference Category: General */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
             <Globe className="w-4 h-4 text-lumiere-primary" />
             Preferências Gerais
@@ -61,20 +61,20 @@ export default function Settings() {
         </div>
 
         {/* Preference Category: Notifications */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
             <Bell className="w-4 h-4 text-lumiere-primary" />
             Notificações
           </h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <span className="text-sm font-bold text-slate-700 dark:text-slate-200 block">Notificações por E-mail</span>
                 <span className="text-xs text-slate-400 dark:text-slate-500">Receba alertas sobre atividades suspeitas ou transações críticas.</span>
               </div>
               <button 
                 onClick={() => setEmailNotifications(!emailNotifications)}
-                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                className="shrink-0 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
                 {emailNotifications ? (
                   <ToggleRight className="w-10 h-10 text-lumiere-primary" />
@@ -84,7 +84,7 @@ export default function Settings() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 opacity-60">
+            <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 opacity-60">
               <div>
                 <span className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
                   Relatórios Semanais
@@ -94,7 +94,7 @@ export default function Settings() {
               </div>
               <button 
                 disabled
-                className="text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50"
+                className="shrink-0 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50"
               >
                 <ToggleLeft className="w-10 h-10 text-slate-300 dark:text-slate-600" />
               </button>

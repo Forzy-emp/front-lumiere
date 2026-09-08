@@ -72,7 +72,7 @@ export default function Login() {
       </div>
 
       {/* Lado direito */}
-      <div className="flex items-center justify-center px-8 py-10 bg-white dark:bg-slate-950">
+      <div className="flex items-center justify-center px-4 sm:px-8 py-10 bg-white dark:bg-slate-950">
         <div className="w-full max-w-md">
 
           {/* Logo */}
@@ -86,7 +86,7 @@ export default function Login() {
             </span>
           </div>
 
-          <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-50">
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50">
             Entrar
           </h2>
 

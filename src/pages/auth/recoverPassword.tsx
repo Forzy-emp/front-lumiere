@@ -66,13 +66,13 @@ export default function RecoverPassword() {
       </div>
 
       {/* Lado direito */}
-      <div className="flex items-center justify-center px-8 py-10 bg-white dark:bg-slate-950">
+      <div className="flex items-center justify-center px-4 sm:px-8 py-10 bg-white dark:bg-slate-950">
         <div className="w-full max-w-md relative">
           
           {/* Voltar */}
           <Link
             to="/login"
-            className="absolute -top-12 left-0 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            className="mb-6 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
           >
             <ChevronLeft className="w-4 h-4" />
             Voltar para o login
@@ -89,7 +89,7 @@ export default function RecoverPassword() {
             </span>
           </div>
 
-          <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-50">
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50">
             Recuperar Senha
           </h2>
 

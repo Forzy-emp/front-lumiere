@@ -44,7 +44,7 @@ export default function History() {
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="flex flex-1 flex-col sm:flex-row gap-3 w-full sm:w-auto">
           {/* Search Input */}
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative w-full flex-1 sm:max-w-sm">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500">
               <Search className="w-4 h-4" />
             </span>
@@ -65,7 +65,7 @@ export default function History() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-9 pr-8 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-lumiere-primary focus:border-transparent appearance-none transition-all duration-200"
+              className="w-full sm:w-auto pl-9 pr-8 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-lumiere-primary focus:border-transparent appearance-none transition-all duration-200"
             >
               <option value="all">Todos os Status</option>
               <option value="completed">Concluídos</option>
@@ -84,8 +84,8 @@ export default function History() {
 
       {/* Table Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto overscroll-x-contain" role="region" aria-label="Tabela de transações, role horizontalmente para ver todas as colunas" tabIndex={0}>
+          <table className="w-full min-w-[680px] text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ID</th>
@@ -104,12 +104,12 @@ export default function History() {
                     <td className="px-6 py-4 text-sm font-bold text-lumiere-primary">{tx.id}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-855 dark:text-slate-100">{tx.name}</span>
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{tx.name}</span>
                         <span className="text-xs text-slate-400 dark:text-slate-500">{tx.email}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-650 dark:text-slate-300">
+                      <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                         {tx.plan}
                       </span>
                     </td>
@@ -120,7 +120,7 @@ export default function History() {
                           ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
                           : tx.status === 'Pendente' 
                           ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800' 
-                          : 'bg-red-50 dark:bg-red-950/40 text-red-705 dark:text-red-400 border border-red-200 dark:border-red-800'
+                          : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
                           tx.status === 'Concluído' 
@@ -142,7 +142,7 @@ export default function History() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-slate-400 dark:text-slate-500">
+                  <td colSpan={7} className="px-4 py-12 text-left sm:text-center text-sm text-slate-400 dark:text-slate-500">
                     Nenhuma transação encontrada para os filtros selecionados.
                   </td>
                 </tr>
@@ -152,7 +152,7 @@ export default function History() {
         </div>
 
         {/* Table Footer / Pagination Simulator */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center text-sm text-slate-500 dark:text-slate-400">
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center text-sm text-slate-500 dark:text-slate-400">
           <span>Mostrando {filteredTransactions.length} de {transactions.length} registros</span>
           <div className="flex gap-2">
             <button disabled className="px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs opacity-50 cursor-not-allowed">Anterior</button>

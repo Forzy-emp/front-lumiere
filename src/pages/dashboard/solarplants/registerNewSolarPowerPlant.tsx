@@ -1,49 +1,32 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Save, MapPin } from "lucide-react";
+import { ChevronLeft, Save, MapPin, Plus, FileText, Trash2 } from "lucide-react";
 import { CadUsina } from "../../../service/usina";
+import { isAxiosError } from "axios";
 
-interface Beneficiary {
-  id: string;
-  name: string;
-  email: string;
-  percent: number;
-}
-
-interface MaintenanceLog {
-  id: string;
-  date: string;
-  time: string;
-  performedBy: "self" | "company";
-  companyName?: string;
-}
-
-interface Plant {
-  id: string;
-  name: string;
-  cep: string;
-  address: string;
-  panelsCount: number;
-  lastMonthProduction: number;
-  lastMonthProductionAnterior?: number;
-  lastMonthFaturamento?: number;
-  lastMonthFaturamentoAnterior?: number;
-  saldoRede?: number;
-  economiaAcumulada?: number;
-  energiaEnviada?: number;
-  status: "ativo" | "inativo";
-  beneficiariesLimit?: number;
-  sunExposure?: number;
-  beneficiaries: Beneficiary[];
-  installationDate: string;
-  lastMaintenanceDate: string;
-  maintenanceHistory?: MaintenanceLog[];
-}
+import { CadastroContaEnergia, type ContaEnergia } from '../../../components/CadastroContaEnergia';
+import { competenciaParaMes, formatarCompetencia, ultimosDozeMeses, validarCompetencia } from '../../../utils/competencia';
+import { montarFatura } from '../../../utils/fatura';
 
 export default function RegisterNewSolarPowerPlant() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [faturas, setFaturas] = useState<ContaEnergia[]>([]);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const savingRef = useRef(false);
+  const mesesPermitidos = ultimosDozeMeses();
+  const competenciasCadastradas = faturas.map(fatura => competenciaParaMes(fatura.competencia));
+
+  const adicionarFatura = (fatura: ContaEnergia) => {
+    if (faturas.length >= 12) throw new Error('Você pode adicionar no máximo 12 faturas.');
+    const erro = validarCompetencia(fatura.competencia, competenciasCadastradas, ultimosDozeMeses());
+    if (erro) throw new Error(erro);
+    setFaturas(atuais => [...atuais, fatura]);
+    setIsInvoiceModalOpen(false);
+    setError('');
+  };
 
   // Form Fields
   const [name, setName] = useState("");
@@ -106,12 +89,14 @@ export default function RegisterNewSolarPowerPlant() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
     setError("");
 
     if (
       !name ||
       !cep ||
       !rua ||
+      !numero ||
       !bairro ||
       !cidade ||
       !estado ||
@@ -125,10 +110,22 @@ export default function RegisterNewSolarPowerPlant() {
       return;
     }
 
+    if (faturas.length < 1 || faturas.length > 12) {
+      setError('Adicione pelo menos 1 e no máximo 12 faturas antes de salvar a usina.');
+      return;
+    }
+    const competencias = new Set<string>();
+    for (const fatura of faturas) {
+      const erro = validarCompetencia(fatura.competencia, [...competencias], ultimosDozeMeses());
+      if (erro) { setError(erro); return; }
+      competencias.add(competenciaParaMes(fatura.competencia));
+    }
+    savingRef.current = true;
     setLoading(true);
 
     const data = {
       name,
+      faturas: faturas.map(montarFatura),
       cep,
       logradouro: rua,
       numero,
@@ -152,68 +149,16 @@ export default function RegisterNewSolarPowerPlant() {
       console.log(response);
 
       navigate("/dashboard/usina");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-
-      setError(error.response?.data?.message || "Erro ao cadastrar usina.");
+      const mensagem = isAxiosError(error) ? error.response?.data?.message : null;
+      setError(Array.isArray(mensagem) ? mensagem.join(' ') : mensagem || "Erro ao cadastrar usina.");
     } finally {
+      savingRef.current = false;
       setLoading(false);
     }
 
-    // setTimeout(() => {
-    //     // Fetch current list
-    //     const stored = localStorage.getItem('solarPlants');
-    //     let currentPlants: Plant[] = [];
-    //     if (stored) {
-    //         try {
-    //             currentPlants = JSON.parse(stored);
-    //         } catch (err) {
-    //             console.error(err);
-    //         }
-    //     }
 
-    //     const newId = String(Date.now());
-    //     const fullAddress = `${rua}, ${numero ? numero : 'S/N'} - ${bairro} - ${cidade} - ${estado}`;
-
-    //     const production = lastMonthProduction === '' ? 0 : Number(lastMonthProduction);
-    //     const limit = beneficiariesLimit === '' ? undefined : Number(beneficiariesLimit);
-    //     const sun = sunExposure === '' ? undefined : Number(sunExposure);
-    //     const panels = Number(panelsCount);
-
-    //     // Default faturamento / saldo calculations to make it fully populated
-    //     const defaultFaturamento = production * 2.3;
-    //     const defaultSaldo = production * 1.15;
-    //     const defaultEnviada = production * 15.4;
-    //     const defaultEconomia = production * 9.9;
-
-    //     const newPlant: Plant = {
-    //         id: newId,
-    //         name,
-    //         cep,
-    //         address: fullAddress,
-    //         panelsCount: panels,
-    //         lastMonthProduction: production,
-    //         lastMonthProductionAnterior: production > 0 ? Math.round(production * 0.9) : 0,
-    //         lastMonthFaturamento: defaultFaturamento,
-    //         lastMonthFaturamentoAnterior: defaultFaturamento > 0 ? Math.round(defaultFaturamento * 0.9) : 0,
-    //         saldoRede: defaultSaldo,
-    //         energiaEnviada: defaultEnviada,
-    //         economiaAcumulada: defaultEconomia,
-    //         status,
-    //         beneficiariesLimit: limit,
-    //         sunExposure: sun,
-    //         beneficiaries: [],
-    //         installationDate,
-    //         lastMaintenanceDate: lastMaintenanceDate || installationDate,
-    //         maintenanceHistory: []
-    //     };
-
-    //     currentPlants.push(newPlant);
-    //     localStorage.setItem('solarPlants', JSON.stringify(currentPlants));
-
-    //     setLoading(false);
-    //     navigate('/dashboard/usina');
-    // }, 1000);
   };
 
   return (
@@ -221,6 +166,7 @@ export default function RegisterNewSolarPowerPlant() {
       {/* Header & Back Action */}
       <div>
         <button
+          disabled={loading}
           onClick={() => navigate("/dashboard/usina")}
           className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-transparent border-0 outline-none"
         >
@@ -238,14 +184,15 @@ export default function RegisterNewSolarPowerPlant() {
       </div>
 
       {/* Form Container */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm max-w-3xl">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm max-w-4xl">
         {error && (
-          <div className="mb-6 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-650 dark:text-red-400 text-sm text-center">
+          <div className="mb-6 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm text-center">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <fieldset disabled={loading} className="space-y-6 min-w-0">
           {/* Section 1: Identificação Básica */}
           <div>
             <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">
@@ -254,7 +201,7 @@ export default function RegisterNewSolarPowerPlant() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Apelido da Usina *
                 </label>
                 <input
@@ -268,12 +215,12 @@ export default function RegisterNewSolarPowerPlant() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Status da Usina *
                 </label>
                 <select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
+                  onChange={(e) => setStatus(e.target.value as "ativo" | "inativo")}
                   className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 >
                   <option value="ativo">Ativo</option>
@@ -292,7 +239,7 @@ export default function RegisterNewSolarPowerPlant() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   CEP *
                 </label>
                 <input
@@ -309,7 +256,7 @@ export default function RegisterNewSolarPowerPlant() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Logradouro (Rua / Avenida) *
                 </label>
                 <input
@@ -325,7 +272,7 @@ export default function RegisterNewSolarPowerPlant() {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Número
                 </label>
                 <input
@@ -338,7 +285,7 @@ export default function RegisterNewSolarPowerPlant() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Bairro *
                 </label>
                 <input
@@ -352,7 +299,7 @@ export default function RegisterNewSolarPowerPlant() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Cidade *
                 </label>
                 <input
@@ -366,7 +313,7 @@ export default function RegisterNewSolarPowerPlant() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Estado *
                 </label>
                 <input
@@ -390,7 +337,7 @@ export default function RegisterNewSolarPowerPlant() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Número de Placas Solares *
                 </label>
                 <input
@@ -408,7 +355,7 @@ export default function RegisterNewSolarPowerPlant() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5 flex items-center gap-1">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
                   Geração de Energia no Mês Anterior (kWh)
                   <span className="text-xs font-normal text-slate-400">
                     (Opcional)
@@ -430,7 +377,7 @@ export default function RegisterNewSolarPowerPlant() {
 
             <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Tipo de Ligação *
                 </label>
 
@@ -459,7 +406,7 @@ export default function RegisterNewSolarPowerPlant() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5 flex items-center gap-1">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
                   Número Limite de Beneficiários
                   <span className="text-xs font-normal text-slate-400">
                     (Opcional)
@@ -479,7 +426,7 @@ export default function RegisterNewSolarPowerPlant() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5 flex items-center gap-1">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
                   Tempo de Exposição ao Sol Diário (Horas)
                   <span className="text-xs font-normal text-slate-400">
                     (Opcional)
@@ -509,7 +456,7 @@ export default function RegisterNewSolarPowerPlant() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Data de Instalação *
                 </label>
                 <input
@@ -522,7 +469,7 @@ export default function RegisterNewSolarPowerPlant() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-350 mb-1.5 flex items-center gap-1">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
                   Data da Última Manutenção
                   <span className="text-xs font-normal text-slate-400">
                     (Opcional)
@@ -534,26 +481,51 @@ export default function RegisterNewSolarPowerPlant() {
                   onChange={(e) => setLastMaintenanceDate(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
-                <span className="text-[10px] text-slate-450 mt-1 block">
+                <span className="text-[10px] text-slate-400 mt-1 block">
                   Se deixada em branco, assume-se a data de instalação.
                 </span>
               </div>
             </div>
           </div>
 
+          <section className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4" aria-label="Faturas iniciais">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2"><FileText className="w-4 h-4 text-blue-500" /> Faturas de energia *</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Adicione de 1 a 12 faturas dos últimos 12 meses encerrados. Prefira a do mês passado: o mês atual ainda não fechou.</p>
+                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-2" role="status">{faturas.length}/12 faturas adicionadas</p>
+              </div>
+              <button type="button" aria-label="Adicionar fatura" title="Adicionar fatura" disabled={loading || faturas.length >= 12}
+                onClick={() => setIsInvoiceModalOpen(true)}
+                className="p-3 shrink-0 rounded-xl bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Plus className="w-5 h-5" /></button>
+            </div>
+            {faturas.length === 0 ? <p className="p-4 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-500 dark:text-slate-400">Clique em + para adicionar a primeira fatura obrigatória.</p> : (
+              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                {[...faturas].sort((a, b) => competenciaParaMes(b.competencia).localeCompare(competenciaParaMes(a.competencia))).map(fatura => (
+                  <li key={fatura.competencia} className="py-3 flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    <div><span className="font-semibold">{fatura.competencia}</span><span className="block text-xs text-slate-500">{fatura.saldoPagar.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                    <button type="button" disabled={loading} aria-label={`Remover fatura de ${fatura.competencia}`} onClick={() => setFaturas(atuais => atuais.filter(item => item.competencia !== fatura.competencia))} className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {faturas.length === 12 && <p className="text-xs text-slate-500">Limite de 12 faturas atingido.</p>}
+            <p className="text-xs text-slate-500 dark:text-slate-400">Período disponível: {formatarCompetencia(mesesPermitidos[11])} a {formatarCompetencia(mesesPermitidos[0])}. As faturas serão registradas ao salvar a usina.</p>
+          </section>
+
           {/* Action Buttons */}
-          <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+          <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <button
               type="button"
               onClick={() => navigate("/dashboard/usina")}
-              className="px-5 py-3 bg-slate-150 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-350 rounded-xl text-sm font-bold cursor-pointer"
+              className="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white rounded-xl text-sm font-bold shadow-md hover:opacity-95 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-6 py-3 bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white rounded-xl text-sm font-bold shadow-md hover:opacity-95 flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -565,8 +537,16 @@ export default function RegisterNewSolarPowerPlant() {
               )}
             </button>
           </div>
+          </fieldset>
         </form>
       </div>
+      {isInvoiceModalOpen && <CadastroContaEnergia
+        competenciasPermitidas={mesesPermitidos}
+        competenciasCadastradas={competenciasCadastradas}
+        submitLabel="Adicionar fatura"
+        onSave={adicionarFatura}
+        onClose={() => setIsInvoiceModalOpen(false)}
+      />}
     </div>
   );
 }

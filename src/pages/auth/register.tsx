@@ -33,7 +33,7 @@ export default function Register() {
 
   // Custom states: User Role & Optional Photo
   const [userRole, setUserRole] = useState<'dono' | 'beneficiario'>('beneficiario');
-  const [photo, setPhoto] = useState<File | null>(null);
+  const [, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
 
   // Password visibility & UX states
@@ -140,7 +140,7 @@ export default function Register() {
           Voltar
         </button>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-xl">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-8 shadow-xl">
           <div className="mb-6 flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-linear-to-br from-[#2E5CFF] to-[#FF7A2F] flex items-center justify-center text-white font-bold text-lg shrink-0">
               L
@@ -225,7 +225,7 @@ export default function Register() {
                   Qual é o seu perfil de acesso?
                 </label>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Beneficiário Card */}
                   <div
                     onClick={() => setUserRole('beneficiario')}
@@ -299,7 +299,7 @@ export default function Register() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Telefone */}
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
@@ -364,7 +364,7 @@ export default function Register() {
               </div>
 
               {/* Cidade & Estado */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
                     Cidade

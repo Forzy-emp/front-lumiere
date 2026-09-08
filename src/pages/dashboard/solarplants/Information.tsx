@@ -1,3 +1,4 @@
+import { FaturasUsina } from '../../../components/FaturasUsina';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -586,7 +587,7 @@ export default function SolarPlantInformation() {
 
       {/* Toast */}
       {toastMessage && (
-        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 ${toastType === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+        <div className={`fixed bottom-4 inset-x-4 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:max-w-md z-50 px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 ${toastType === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
           }`}>
           <Check className="w-5 h-5" />
           <span className="text-sm font-bold">{toastMessage}</span>
@@ -605,22 +606,22 @@ export default function SolarPlantInformation() {
           </button>
 
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">{plant.name}</h2>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${plant.status === 'ativo'
+            <h2 className="min-w-0 break-words text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">{plant.name}</h2>
+            <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${plant.status === 'ativo'
               ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'
               : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400'
               }`}>
               {plant.status === 'ativo' ? 'Ativa' : 'Inativa'}
             </span>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
-            <MapPin className="w-4 h-4 text-slate-400" />
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-start gap-1">
+            <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
             {plant.address}
           </p>
         </div>
 
         {/* Global actions */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="grid grid-cols-1 sm:flex gap-2 sm:flex-wrap">
           <button
             onClick={handleOpenEditPlantModal}
             className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 animate-fade-in"
@@ -646,11 +647,13 @@ export default function SolarPlantInformation() {
         </div>
       </div>
 
+      <FaturasUsina key={plant.id} usinaId={plant.id} />
+
       {/* Main Grid: Details + Beneficiaries */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* Left Side: Technical Info & Readings */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="xl:col-span-1 min-w-0 space-y-6">
 
           {/* Specifications */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
@@ -725,8 +728,8 @@ export default function SolarPlantInformation() {
                 <button
                   onClick={handleOpenMaintenanceModal}
                   className={`w-full py-2.5 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.99] ${isRed
-                    ? 'bg-red-650 hover:bg-red-750 text-white shadow-sm'
-                    : 'bg-amber-550 hover:bg-amber-650 text-white shadow-sm'
+                    ? 'bg-red-600 hover:bg-red-700 text-white shadow-sm'
+                    : 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm'
                     }`}
                 >
                   <Wrench className="w-4 h-4" />
@@ -745,31 +748,31 @@ export default function SolarPlantInformation() {
 
             <div className="space-y-3">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-450 dark:text-slate-400">Geração no Último Mês:</span>
+                <span className="text-slate-400 dark:text-slate-400">Geração no Último Mês:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">{plant.lastMonthProduction.toLocaleString()} kWh</span>
               </div>
 
               <div className="flex justify-between text-xs">
-                <span className="text-slate-450 dark:text-slate-400">Faturamento Estimado:</span>
+                <span className="text-slate-400 dark:text-slate-400">Faturamento Estimado:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
                   R$ {(plant.lastMonthFaturamento ?? plant.lastMonthProduction * 2.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
               <div className="flex justify-between text-xs">
-                <span className="text-slate-450 dark:text-slate-400">Saldo Atual (Crédito):</span>
+                <span className="text-slate-400 dark:text-slate-400">Saldo Atual (Crédito):</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">{(plant.saldoRede ?? 0).toLocaleString()} kWh</span>
               </div>
 
               <div className="flex justify-between text-xs">
-                <span className="text-slate-450 dark:text-slate-400">Economia Acumulada:</span>
+                <span className="text-slate-400 dark:text-slate-400">Economia Acumulada:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
                   R$ {(plant.economiaAcumulada ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
               <div className="flex justify-between text-xs pt-1 border-t border-dashed border-slate-100 dark:border-slate-800">
-                <span className="text-slate-450 dark:text-slate-400 flex items-center gap-1">
+                <span className="text-slate-400 dark:text-slate-400 flex items-center gap-1">
                   <Leaf className="w-3.5 h-3.5 text-green-500" />
                   CO₂ Evitado Estimado:
                 </span>
@@ -806,12 +809,12 @@ export default function SolarPlantInformation() {
             {plant.maintenanceHistory && plant.maintenanceHistory.length > 0 ? (
               <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
                 {[...plant.maintenanceHistory].reverse().map((log) => (
-                  <div key={log.id} className="text-xs bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-850 p-2.5 rounded-xl flex justify-between items-start animate-fade-in">
+                  <div key={log.id} className="text-xs bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 p-2.5 rounded-xl flex justify-between items-start animate-fade-in">
                     <div>
-                      <p className="font-bold text-slate-755 dark:text-slate-200">
+                      <p className="font-bold text-slate-700 dark:text-slate-200">
                         {formatDate(log.date)} às {log.time}
                       </p>
-                      <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-0.5">
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
                         Realizado por: <span className="font-semibold">{log.performedBy === 'self' ? 'Eu mesmo' : `Empresa: ${log.companyName}`}</span>
                       </p>
                     </div>
@@ -819,7 +822,7 @@ export default function SolarPlantInformation() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-slate-450 dark:text-slate-500 text-center py-2">
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">
                 Nenhuma manutenção registrada no histórico.
               </p>
             )}
@@ -828,7 +831,7 @@ export default function SolarPlantInformation() {
         </div>
 
         {/* Right Side: Beneficiary Management */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="xl:col-span-2 min-w-0 space-y-6">
 
           {/* Beneficiaries Card */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
@@ -847,7 +850,7 @@ export default function SolarPlantInformation() {
 
               <button
                 onClick={handleOpenAddBeneficiary}
-                className="inline-flex h-9 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-750 text-white px-4 text-xs font-bold shadow-sm transition-colors gap-1.5 cursor-pointer shrink-0"
+                className="inline-flex h-9 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-4 text-xs font-bold shadow-sm transition-colors gap-1.5 cursor-pointer shrink-0"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 Adicionar
@@ -889,9 +892,9 @@ export default function SolarPlantInformation() {
 
             {/* Beneficiary List */}
             {plant.beneficiaries.length > 0 ? (
-              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-150 dark:divide-slate-800">
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
                 {plant.beneficiaries.map((b) => (
-                  <div key={b.id} className="flex justify-between items-center p-4 bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-850/50 transition-colors">
+                  <div key={b.id} className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center p-4 bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
 
                     {/* User profile */}
                     <div className="flex items-center gap-3 min-w-0">
@@ -905,7 +908,7 @@ export default function SolarPlantInformation() {
                     </div>
 
                     {/* Allocated percent & actions */}
-                    <div className="flex items-center gap-4 shrink-0" >
+                    <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0" >
                       <div className="text-right">
                         <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400">{b.percent}%</span>
                         <p className="text-[8px] text-slate-400 uppercase font-semibold">Crédito</p>
@@ -921,7 +924,7 @@ export default function SolarPlantInformation() {
                         </button>
                         <button
                           onClick={() => handleRemoveBeneficiary(b.id)}
-                          className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/20 text-slate-400 hover:text-red-650 rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/20 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
                           title="Excluir beneficiário"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -935,7 +938,7 @@ export default function SolarPlantInformation() {
             ) : (
               <div className="flex flex-col items-center justify-center py-10 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center">
                 <Users className="w-8 h-8 text-slate-400 mb-2" />
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-350">Nenhum Beneficiário Associado</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Nenhum Beneficiário Associado</p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 mb-4 max-w-xs">
                   Os créditos gerados por esta usina ainda não estão sendo destinados a nenhum cliente.
                 </p>
@@ -954,11 +957,12 @@ export default function SolarPlantInformation() {
 
       </div >
 
+
       {/* 1. Modal: Novo Registro de Geração */}
       {
         isReadingModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center overflow-y-auto p-3 sm:p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto overscroll-contain p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
 
               <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div>
@@ -1005,7 +1009,7 @@ export default function SolarPlantInformation() {
                   <button
                     type="button"
                     onClick={() => setIsReadingModalOpen(false)}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -1030,8 +1034,8 @@ export default function SolarPlantInformation() {
       {/* 2. Modal: Gestão de Beneficiários */}
       {
         isBeneficiaryModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center overflow-y-auto p-3 sm:p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto overscroll-contain p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
 
               <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div>
@@ -1056,7 +1060,7 @@ export default function SolarPlantInformation() {
 
               <form onSubmit={handleBeneficiarySubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Nome Completo *</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nome Completo *</label>
                   <input
                     type="text"
                     placeholder="Ex: Clara Mendes"
@@ -1068,7 +1072,7 @@ export default function SolarPlantInformation() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">E-mail *</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">E-mail *</label>
                   <input
                     type="email"
                     placeholder="Ex: clara@email.com"
@@ -1080,7 +1084,7 @@ export default function SolarPlantInformation() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1 flex justify-between">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex justify-between">
                     <span>Crédito Alocado (%) *</span>
                     <span className="text-[10px] text-slate-400">Total disponível: {100 - (plant.beneficiaries.filter(b => b.id !== benId).reduce((sum, b) => sum + b.percent, 0))}%</span>
                   </label>
@@ -1100,7 +1104,7 @@ export default function SolarPlantInformation() {
                   <button
                     type="button"
                     onClick={() => setIsBeneficiaryModalOpen(false)}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -1120,8 +1124,8 @@ export default function SolarPlantInformation() {
       {/* 3. Modal: Editar Usina */}
       {
         isEditPlantModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center overflow-y-auto p-3 sm:p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
 
               <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div>
@@ -1142,7 +1146,7 @@ export default function SolarPlantInformation() {
               <form onSubmit={handleEditPlantSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Apelido da Usina *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Apelido da Usina *</label>
                     <input
                       type="text"
                       value={editName}
@@ -1153,7 +1157,7 @@ export default function SolarPlantInformation() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">CEP *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">CEP *</label>
                     <input
                       type="text"
                       value={editCep}
@@ -1165,7 +1169,7 @@ export default function SolarPlantInformation() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Endereço Completo *</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Endereço Completo *</label>
                   <input
                     type="text"
                     value={editAddress}
@@ -1177,7 +1181,7 @@ export default function SolarPlantInformation() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Placas Solares *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Placas Solares *</label>
                     <input
                       type="number"
                       value={editPanelsCount}
@@ -1188,7 +1192,7 @@ export default function SolarPlantInformation() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1 flex items-center gap-0.5">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-0.5">
                       Exposição (h/dia)
                       <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
                     </label>
@@ -1202,7 +1206,7 @@ export default function SolarPlantInformation() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1 flex items-center gap-0.5">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-0.5">
                       Limite Clientes
                       <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
                     </label>
@@ -1217,7 +1221,7 @@ export default function SolarPlantInformation() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Data de Instalação *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Data de Instalação *</label>
                     <input
                       type="date"
                       value={editInstallationDate}
@@ -1228,7 +1232,7 @@ export default function SolarPlantInformation() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Última Manutenção *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Última Manutenção *</label>
                     <input
                       type="date"
                       value={editLastMaintenanceDate}
@@ -1243,7 +1247,7 @@ export default function SolarPlantInformation() {
                   <button
                     type="button"
                     onClick={() => setIsEditPlantModalOpen(false)}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -1268,8 +1272,8 @@ export default function SolarPlantInformation() {
       {/* 4. Modal: Registrar Manutenção */}
       {
         isMaintenanceModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center overflow-y-auto p-3 sm:p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto overscroll-contain p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
 
               <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div>
@@ -1288,7 +1292,7 @@ export default function SolarPlantInformation() {
               </div>
 
               {maintError && (
-                <div className="mb-4 p-2 rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-650 dark:text-red-400 text-xs text-center font-medium">
+                <div className="mb-4 p-2 rounded bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs text-center font-medium">
                   {maintError}
                 </div>
               )}
@@ -1296,7 +1300,7 @@ export default function SolarPlantInformation() {
               <form onSubmit={handleMaintenanceSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Data da Manutenção *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Data da Manutenção *</label>
                     <input
                       type="date"
                       value={maintDate}
@@ -1307,7 +1311,7 @@ export default function SolarPlantInformation() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Hora da Manutenção *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hora da Manutenção *</label>
                     <input
                       type="time"
                       value={maintTime}
@@ -1319,10 +1323,10 @@ export default function SolarPlantInformation() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-2">Quem realizou a manutenção? *</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">Quem realizou a manutenção? *</label>
                   <div className="grid grid-cols-2 gap-3">
                     <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${maintPerformedBy === 'self'
-                      ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold'
+                      ? 'border-blue-500 bg-blue-50/10 text-blue-600 dark:text-blue-400 font-bold'
                       : 'border-slate-200 dark:border-slate-800 text-slate-500'
                       }`}>
                       <input
@@ -1337,7 +1341,7 @@ export default function SolarPlantInformation() {
                     </label>
 
                     <label className={`flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${maintPerformedBy === 'company'
-                      ? 'border-blue-500 bg-blue-50/10 text-blue-650 dark:text-blue-400 font-bold'
+                      ? 'border-blue-500 bg-blue-50/10 text-blue-600 dark:text-blue-400 font-bold'
                       : 'border-slate-200 dark:border-slate-800 text-slate-500'
                       }`}>
                       <input
@@ -1355,7 +1359,7 @@ export default function SolarPlantInformation() {
 
                 {maintPerformedBy === 'company' && (
                   <div className="animate-in slide-in-from-top-2 duration-200">
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1">Nome da Empresa Prestadora *</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nome da Empresa Prestadora *</label>
                     <input
                       type="text"
                       placeholder="Ex: SolarTech Manutenções"
@@ -1371,7 +1375,7 @@ export default function SolarPlantInformation() {
                   <button
                     type="button"
                     onClick={() => setIsMaintenanceModalOpen(false)}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
                   >
                     Cancelar
                   </button>

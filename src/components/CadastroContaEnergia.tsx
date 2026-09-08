@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { InvoiceField } from './InvoiceField';
+import { useDialog } from '../hooks/useDialog';
+import { isAxiosError } from 'axios';
+import { competenciaParaMes, formatarCompetencia, mesReferencia, validarCompetencia } from '../utils/competencia';
 import {
   X,
   Save,
   FileText,
-  Zap,
   ArrowDownLeft,
   ArrowUpRight,
-  Flag,
-  Receipt,
-  Coins,
   AlertCircle
 } from 'lucide-react';
 
@@ -50,7 +50,7 @@ export interface CreditosEnergia {
 }
 
 export interface ContaEnergia {
-  idUsina: number;
+  idUsina?: number;
   competencia: string;
   vencimento: string;
   saldoPagar: number;
@@ -62,8 +62,11 @@ export interface ContaEnergia {
 }
 
 export interface CadastroContaEnergiaProps {
-  idUsina: number;
+  idUsina?: number;
   isOpen?: boolean;
+  competenciasCadastradas?: string[];
+  competenciasPermitidas?: string[];
+  submitLabel?: string;
   onClose?: () => void;
   onSave: (dados: ContaEnergia) => Promise<void> | void;
 }
@@ -73,9 +76,20 @@ export function CadastroContaEnergia({
   isOpen = true,
   onClose,
   onSave,
+  competenciasCadastradas = [],
+  competenciasPermitidas,
+  submitLabel = 'Salvar Conta',
 }: CadastroContaEnergiaProps) {
   // --- Seção 1: Identificação da Fatura (Obrigatórios) ---
-  const [competencia, setCompetencia] = useState('');
+  const [competencia, setCompetencia] = useState(() => {
+    const preferida = competenciasPermitidas
+      ? competenciasPermitidas.find(mes => !competenciasCadastradas.some(data => data.slice(0, 7) === mes))
+      : mesReferencia(new Date(), -1);
+    return preferida && !competenciasCadastradas.some(data => data.slice(0, 7) === preferida)
+      ? formatarCompetencia(preferida) : '';
+  });
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [vencimento, setVencimento] = useState('');
   const [saldoPagar, setSaldoPagar] = useState<string | number>('');
 
@@ -119,6 +133,13 @@ export function CadastroContaEnergia({
 
   // Mensagens de erro / validação
   const [error, setError] = useState<string | null>(null);
+
+  const closeDialog = useCallback(() => {
+    if (!savingRef.current) onClose?.();
+  }, [onClose]);
+  const dialogRef = useDialog(isOpen, closeDialog);
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
 
   if (!isOpen) return null;
 
@@ -174,13 +195,20 @@ export function CadastroContaEnergia({
   };
 
   const handleCancel = () => {
+    if (savingRef.current) return;
     resetForm();
     onClose?.();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
     setError(null);
+    const competenciaError = validarCompetencia(competencia, competenciasCadastradas, competenciasPermitidas);
+    if (competenciaError) {
+      setError(competenciaError);
+      return;
+    }
 
     // Validação de campos obrigatórios
     if (!competencia.trim()) {
@@ -233,7 +261,7 @@ export function CadastroContaEnergia({
 
     // Montagem do objeto JSON estritamente tipado
     const contaEnergiaData: ContaEnergia = {
-      idUsina: Number(idUsina),
+      idUsina,
       competencia: competencia.trim(),
       vencimento: vencimento.trim(),
       saldoPagar: Number(saldoPagar),
@@ -292,13 +320,14 @@ export function CadastroContaEnergia({
       },
     };
 
+    savingRef.current = true;
+    setSaving(true);
     try {
       await onSave(contaEnergiaData);
 
       resetForm();
-    } catch (error: any) {
-      const mensagem =
-        error.response?.data?.message;
+    } catch (error: unknown) {
+      const mensagem = isAxiosError(error) ? error.response?.data?.message : error instanceof Error ? error.message : null;
 
       if (Array.isArray(mensagem)) {
         setError(mensagem.join(' '));
@@ -308,596 +337,122 @@ export function CadastroContaEnergia({
           'Não foi possível cadastrar a fatura.'
         );
       }
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200 my-auto">
-        
-        {/* Cabeçalho do Modal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base md:text-lg font-bold text-slate-900 dark:text-slate-100">
-                Cadastro de Conta de Energia
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Informe os dados da fatura de energia elétrica da usina.
-              </p>
-            </div>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm sm:p-4">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="invoice-title" aria-describedby="invoice-description" tabIndex={-1}
+        className="flex h-dvh w-full min-w-0 flex-col overflow-hidden bg-white dark:bg-slate-900 shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:max-w-5xl sm:rounded-2xl border border-slate-200 dark:border-slate-800">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 dark:border-slate-800 p-4 sm:px-6 sm:py-5">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400"><FileText className="h-5 w-5" /></div>
+            <div><h3 id="invoice-title" className="text-lg font-bold text-slate-900 dark:text-slate-100">Nova fatura de energia</h3>
+              <p id="invoice-description" className="mt-1 text-sm text-slate-500 dark:text-slate-400">Tenha sua conta de luz em mãos. Os campos com * são obrigatórios.</p></div>
           </div>
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-            aria-label="Fechar modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Formulário com Scroll Interno */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-800 dark:text-slate-200">
-            
-            {/* Mensagem de Erro */}
-            {error && (
-              <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm flex items-center gap-2.5">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* SEÇÃO 1: Identificação da Fatura */}
-            <div className="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-750/60 rounded-xl p-4.5 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200/60 dark:border-slate-750/50 pb-2.5">
-                <FileText className="w-4 h-4 text-[#2E5CFF]" />
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                  Seção 1 - Identificação da Fatura <span className="text-red-500 font-bold">*</span>
-                </h4>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Competência (Mês/Ano) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: 08/2026"
-                    maxLength={7}
-                    value={competencia}
-                    onChange={handleCompetenciaChange}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    required
-                  />
-                  <span className="text-[10px] text-slate-400 mt-1 block">Formato: MM/AAAA</span>
+          <button type="button" onClick={handleCancel} disabled={saving} aria-label="Fechar cadastro de fatura" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="h-5 w-5" /></button>
+        </header>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-slate-50 dark:bg-slate-950/50 p-4 sm:p-6">
+            {error && <div ref={errorRef} tabIndex={-1} role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300"><AlertCircle className="h-5 w-5 shrink-0" />{error}</div>}
+            <fieldset disabled={saving} className="min-w-0 space-y-5">
+              <section className="invoice-section space-y-4">
+                <h4 className="invoice-heading">Dados da fatura</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="invoice-month" className="ui-label">Competência * </label>
+                    {competenciasPermitidas ? <select id="invoice-month" className="ui-input" required value={competencia ? competenciaParaMes(competencia) : ''} onChange={e => setCompetencia(e.target.value ? formatarCompetencia(e.target.value) : '')}>
+                      <option value="">Selecione o mês</option>
+                      {competenciasPermitidas.map(mes => {
+                        const cadastrada = competenciasCadastradas.some(data => data.slice(0, 7) === mes);
+                        return <option key={mes} value={mes} disabled={cadastrada}>{formatarCompetencia(mes)}{cadastrada ? ' — adicionada' : ''}</option>;
+                      })}
+                    </select> : <input id="invoice-month" type="text" inputMode="numeric" placeholder="MM/AAAA" maxLength={7} value={competencia} onChange={handleCompetenciaChange} className="ui-input" required />}
+                    <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Mês e ano de referência da conta.</p>
+                  </div>
+                  <InvoiceField label="Vencimento" value={vencimento} onChange={setVencimento} required type="date" />
+                  <InvoiceField label="Total a pagar (R$)" value={saldoPagar} onChange={setSaldoPagar} required />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Vencimento <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={vencimento}
-                    onChange={(e) => setVencimento(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Saldo a Pagar (R$) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Ex: 250.00"
-                    value={saldoPagar}
-                    onChange={(e) => setSaldoPagar(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    required
-                  />
-                  <span className="text-[10px] text-slate-400 mt-1 block">Valor total monetário da fatura</span>
-                </div>
-              </div>
-            </div>
-
-            {/* SEÇÃO 2: Energia Ativa Fornecida */}
-            <div className="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-750/60 rounded-xl p-4.5 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200/60 dark:border-slate-750/50 pb-2.5">
-                <ArrowDownLeft className="w-4 h-4 text-blue-500" />
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                  Seção 2 - Energia Ativa Fornecida
-                </h4>
-              </div>
-
-              <div className="space-y-4">
-                {/* Bloco TUSD */}
-                <div className="bg-white dark:bg-slate-850/70 border border-slate-200/70 dark:border-slate-700/60 rounded-xl p-3.5">
-                  <span className="inline-block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2.5">
-                    TUSD
-                  </span>
+              </section>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <section className="invoice-section space-y-4">
+                <div><h4 className="invoice-heading"><ArrowDownLeft className="w-4 h-4 text-blue-500" />Energia fornecida</h4><p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Energia recebida da distribuidora, conforme a fatura.</p></div>
+                <fieldset className="min-w-0 space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <legend className="text-xs font-bold text-slate-500 dark:text-slate-400 pr-2">TUSD</legend>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Quantidade (kWh)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0"
-                        value={fornecidaTusdQtd}
-                        onChange={(e) => setFornecidaTusdQtd(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Preço Unitário (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={fornecidaTusdPreco}
-                        onChange={(e) => setFornecidaTusdPreco(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Valor (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={fornecidaTusdValor}
-                        onChange={(e) => setFornecidaTusdValor(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
+                    <InvoiceField label="Quantidade (kWh)" value={fornecidaTusdQtd} onChange={setFornecidaTusdQtd} required />
+                    <InvoiceField label="Preço (R$/kWh)" value={fornecidaTusdPreco} onChange={setFornecidaTusdPreco} required />
+                    <InvoiceField label="Valor (R$)" value={fornecidaTusdValor} onChange={setFornecidaTusdValor} required />
                   </div>
-                </div>
-
-                {/* Bloco TE */}
-                <div className="bg-white dark:bg-slate-850/70 border border-slate-200/70 dark:border-slate-700/60 rounded-xl p-3.5">
-                  <span className="inline-block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2.5">
-                    TE
-                  </span>
+                </fieldset>
+<fieldset className="min-w-0 space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <legend className="text-xs font-bold text-slate-500 dark:text-slate-400 pr-2">TE</legend>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Quantidade (kWh)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0"
-                        value={fornecidaTeQtd}
-                        onChange={(e) => setFornecidaTeQtd(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Preço Unitário (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={fornecidaTePreco}
-                        onChange={(e) => setFornecidaTePreco(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Valor (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={fornecidaTeValor}
-                        onChange={(e) => setFornecidaTeValor(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
+                    <InvoiceField label="Quantidade (kWh)" value={fornecidaTeQtd} onChange={setFornecidaTeQtd} required />
+                    <InvoiceField label="Preço (R$/kWh)" value={fornecidaTePreco} onChange={setFornecidaTePreco} required />
+                    <InvoiceField label="Valor (R$)" value={fornecidaTeValor} onChange={setFornecidaTeValor} required />
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* SEÇÃO 3: Energia Ativa Injetada */}
-            <div className="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-750/60 rounded-xl p-4.5 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200/60 dark:border-slate-750/50 pb-2.5">
-                <ArrowUpRight className="w-4 h-4 text-emerald-500" />
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                  Seção 3 - Energia Ativa Injetada
-                </h4>
-              </div>
-
-              <div className="space-y-4">
-                {/* Bloco TUSD */}
-                <div className="bg-white dark:bg-slate-850/70 border border-slate-200/70 dark:border-slate-700/60 rounded-xl p-3.5">
-                  <span className="inline-block text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2.5">
-                    TUSD
-                  </span>
+                </fieldset>
+              </section>
+                <section className="invoice-section space-y-4">
+                <div><h4 className="invoice-heading"><ArrowUpRight className="w-4 h-4 text-blue-500" />Energia injetada</h4><p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Energia enviada à rede, conforme a fatura.</p></div>
+                <fieldset className="min-w-0 space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <legend className="text-xs font-bold text-slate-500 dark:text-slate-400 pr-2">TUSD</legend>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Quantidade (kWh)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0"
-                        value={injetadaTusdQtd}
-                        onChange={(e) => setInjetadaTusdQtd(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Preço Unitário (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={injetadaTusdPreco}
-                        onChange={(e) => setInjetadaTusdPreco(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Valor (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={injetadaTusdValor}
-                        onChange={(e) => setInjetadaTusdValor(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
+                    <InvoiceField label="Quantidade (kWh)" value={injetadaTusdQtd} onChange={setInjetadaTusdQtd} required />
+                    <InvoiceField label="Preço (R$/kWh)" value={injetadaTusdPreco} onChange={setInjetadaTusdPreco} required />
+                    <InvoiceField label="Valor (R$)" value={injetadaTusdValor} onChange={setInjetadaTusdValor} required />
                   </div>
-                </div>
-
-                {/* Bloco TE */}
-                <div className="bg-white dark:bg-slate-850/70 border border-slate-200/70 dark:border-slate-700/60 rounded-xl p-3.5">
-                  <span className="inline-block text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2.5">
-                    TE
-                  </span>
+                </fieldset>
+<fieldset className="min-w-0 space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <legend className="text-xs font-bold text-slate-500 dark:text-slate-400 pr-2">TE</legend>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Quantidade (kWh)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0"
-                        value={injetadaTeQtd}
-                        onChange={(e) => setInjetadaTeQtd(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Preço Unitário (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={injetadaTePreco}
-                        onChange={(e) => setInjetadaTePreco(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Valor (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={injetadaTeValor}
-                        onChange={(e) => setInjetadaTeValor(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
+                    <InvoiceField label="Quantidade (kWh)" value={injetadaTeQtd} onChange={setInjetadaTeQtd} required />
+                    <InvoiceField label="Preço (R$/kWh)" value={injetadaTePreco} onChange={setInjetadaTePreco} required />
+                    <InvoiceField label="Valor (R$)" value={injetadaTeValor} onChange={setInjetadaTeValor} required />
+                  </div>
+                </fieldset>
+              </section>
+              </div>
+              <div><h4 className="invoice-heading">Informações complementares</h4><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Preencha apenas o que aparecer na sua conta.</p></div>
+              <details className="invoice-optional">
+                <summary>Bandeira tarifária <span className="font-normal text-slate-500">· opcional</span></summary>
+                <div className="p-4 sm:p-5 space-y-4">
+                  <div><label htmlFor="invoice-flag" className="ui-label">Bandeira do período</label><select id="invoice-flag" value={bandeiraTipo} onChange={e => setBandeiraTipo(e.target.value)} className="ui-input">
+                    <option value="">Não informada</option>
+                    {['Verde','Amarela','Vermelha Patamar 1','Vermelha Patamar 2'].map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}
+                  </select></div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <InvoiceField label="Fornecida (kWh)" value={bandeiraFornecidaQtd} onChange={setBandeiraFornecidaQtd} /><InvoiceField label="Valor fornecida (R$)" value={bandeiraFornecidaValor} onChange={setBandeiraFornecidaValor} />
+                    <InvoiceField label="Injetada (kWh)" value={bandeiraInjetadaQtd} onChange={setBandeiraInjetadaQtd} /><InvoiceField label="Valor injetada (R$)" value={bandeiraInjetadaValor} onChange={setBandeiraInjetadaValor} />
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* SEÇÃO 4: Bandeira Tarifária (Opcional) */}
-            <div className="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-750/60 rounded-xl p-4.5 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200/60 dark:border-slate-750/50 pb-2.5">
-                <Flag className="w-4 h-4 text-amber-500" />
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                  Seção 4 - Bandeira Tarifária
-                  <span className="text-[11px] font-normal text-slate-400 lowercase ml-1.5">(opcional)</span>
-                </h4>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Tipo de Bandeira
-                </label>
-                <select
-                  value={bandeiraTipo}
-                  onChange={(e) => setBandeiraTipo(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                >
-                  <option value="">Selecione ou deixe em branco</option>
-                  <option value="Verde">Verde</option>
-                  <option value="Amarela">Amarela</option>
-                  <option value="Vermelha Patamar 1">Vermelha Patamar 1</option>
-                  <option value="Vermelha Patamar 2">Vermelha Patamar 2</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Consumo adicional da bandeira - Energia fornecida */}
-                <div className="bg-white dark:bg-slate-850/70 border border-slate-200/70 dark:border-slate-700/60 rounded-xl p-3.5">
-                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2.5">
-                    Consumo adicional da bandeira - Energia fornecida
-                  </span>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Quantidade (kWh)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0"
-                        value={bandeiraFornecidaQtd}
-                        onChange={(e) => setBandeiraFornecidaQtd(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Valor (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={bandeiraFornecidaValor}
-                        onChange={(e) => setBandeiraFornecidaValor(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
+              </details>
+              <details className="invoice-optional">
+                <summary>Encargos e contribuições <span className="font-normal text-slate-500">· opcional</span></summary>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 sm:p-5">
+                  <InvoiceField label="Multa (R$)" value={multa} onChange={setMulta} /><InvoiceField label="Juros (R$)" value={juros} onChange={setJuros} /><InvoiceField label="Contribuição municipal (R$)" value={contribuicaoMunicipal} onChange={setContribuicaoMunicipal} /><InvoiceField label="Outros encargos (R$)" value={outros} onChange={setOutros} />
                 </div>
-
-                {/* Energia injetada adicional da bandeira */}
-                <div className="bg-white dark:bg-slate-850/70 border border-slate-200/70 dark:border-slate-700/60 rounded-xl p-3.5">
-                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2.5">
-                    Energia injetada adicional da bandeira
-                  </span>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Quantidade (kWh)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0"
-                        value={bandeiraInjetadaQtd}
-                        onChange={(e) => setBandeiraInjetadaQtd(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-350 mb-1">
-                        Valor (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="0,00"
-                        value={bandeiraInjetadaValor}
-                        onChange={(e) => setBandeiraInjetadaValor(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
+              </details>
+              <details className="invoice-optional">
+                <summary>Créditos de energia <span className="font-normal text-slate-500">· opcional</span></summary>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 sm:p-5">
+                  <InvoiceField label="Energia injetada informada (kWh)" value={energiaInjetadaInformada} onChange={setEnergiaInjetadaInformada} /><InvoiceField label="Créditos recebidos (kWh)" value={creditosRecebidos} onChange={setCreditosRecebidos} /><InvoiceField label="Participação no saldo (%)" value={participacaoSaldo} onChange={setParticipacaoSaldo} /><InvoiceField label="Saldo total (kWh)" value={saldoTotal} onChange={setSaldoTotal} /><InvoiceField label="Saldo atualizado (kWh)" value={saldoAtualizado} onChange={setSaldoAtualizado} />
                 </div>
-              </div>
-            </div>
-
-            {/* SEÇÃO 5: Encargos (Opcional) */}
-            <div className="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-750/60 rounded-xl p-4.5 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200/60 dark:border-slate-750/50 pb-2.5">
-                <Receipt className="w-4 h-4 text-orange-500" />
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                  Seção 5 - Encargos
-                  <span className="text-[11px] font-normal text-slate-400 lowercase ml-1.5">(opcional)</span>
-                </h4>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Multa (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={multa}
-                    onChange={(e) => setMulta(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Juros (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={juros}
-                    onChange={(e) => setJuros(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
-                    Contrib. Municipal (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={contribuicaoMunicipal}
-                    onChange={(e) => setContribuicaoMunicipal(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
-                    Outros (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={outros}
-                    onChange={(e) => setOutros(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* SEÇÃO 6: Créditos de Energia (Opcional) */}
-            <div className="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-750/60 rounded-xl p-4.5 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200/60 dark:border-slate-750/50 pb-2.5">
-                <Coins className="w-4 h-4 text-emerald-500" />
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                  Seção 6 - Créditos de Energia
-                  <span className="text-[11px] font-normal text-slate-400 lowercase ml-1.5">(opcional)</span>
-                </h4>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
-                    Energia Injetada Informada (kWh)
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="0"
-                    value={energiaInjetadaInformada}
-                    onChange={(e) => setEnergiaInjetadaInformada(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
-                    Créditos Recebidos (kWh)
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="0"
-                    value={creditosRecebidos}
-                    onChange={(e) => setCreditosRecebidos(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
-                    Participação no Saldo (%)
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="Ex: 100"
-                    value={participacaoSaldo}
-                    onChange={(e) => setParticipacaoSaldo(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
-                    Saldo Total (kWh)
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="0"
-                    value={saldoTotal}
-                    onChange={(e) => setSaldoTotal(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-350 mb-1.5">
-                    Saldo Atualizado (kWh)
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="0"
-                    value={saldoAtualizado}
-                    onChange={(e) => setSaldoAtualizado(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
+              </details>
+            </fieldset>
           </div>
-
-          {/* Rodapé / Botões de Ação */}
-          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex justify-end items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-4 py-2.5 bg-slate-150 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-350 rounded-xl text-xs md:text-sm font-bold cursor-pointer transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white rounded-xl text-xs md:text-sm font-bold shadow-md hover:opacity-95 transition-opacity flex items-center gap-2 cursor-pointer"
-            >
-              <Save className="w-4 h-4" />
-              Salvar Conta
-            </button>
-          </div>
+          <footer className="safe-bottom shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:px-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400">Confira a competência e os valores antes de salvar.</p>
+            <div className="grid grid-cols-2 gap-3 sm:flex">
+              <button type="button" onClick={handleCancel} disabled={saving} className="ui-secondary">Cancelar</button>
+              <button type="submit" disabled={saving} className="ui-primary"><Save className="w-4 h-4 shrink-0" />{saving ? 'Salvando...' : submitLabel}</button>
+            </div>
+          </footer>
         </form>
-
       </div>
     </div>
   );

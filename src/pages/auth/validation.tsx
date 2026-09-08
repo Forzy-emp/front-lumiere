@@ -126,13 +126,13 @@ export default function Validation() {
       </div>
 
       {/* Lado direito */}
-      <div className="flex items-center justify-center px-8 py-10 bg-white dark:bg-slate-950">
+      <div className="flex items-center justify-center px-4 sm:px-8 py-10 bg-white dark:bg-slate-950">
         <div className="w-full max-w-md relative">
           
           {/* Voltar */}
           <button
             onClick={() => navigate(-1)}
-            className="absolute -top-12 left-0 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-transparent border-0"
+            className="mb-6 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-transparent border-0"
           >
             <ChevronLeft className="w-4 h-4" />
             Voltar
@@ -149,7 +149,7 @@ export default function Validation() {
             </span>
           </div>
 
-          <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Verificar Código
           </h2>
 
@@ -177,18 +177,20 @@ export default function Validation() {
                 Insira o código abaixo
               </label>
 
-              <div className="flex gap-2.5 justify-between max-w-sm mx-auto">
+              <div className="grid grid-cols-6 gap-2 max-w-sm mx-auto">
                 {code.map((digit, idx) => (
                   <input
                     key={idx}
                     type="text"
+                    aria-label={`Dígito ${idx + 1} do código`}
+                    inputMode="numeric"
                     maxLength={1}
                     value={digit}
                     onChange={(e) => handleChange(e.target.value, idx)}
                     onKeyDown={(e) => handleKeyDown(e, idx)}
                     onPaste={idx === 0 ? handlePaste : undefined}
                     ref={(el) => { inputRefs.current[idx] = el; }}
-                    className="w-12 h-14 text-center text-2xl font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-150"
+                    className="w-full min-w-0 h-12 sm:h-14 text-center text-xl sm:text-2xl font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-150"
                   />
                 ))}
               </div>

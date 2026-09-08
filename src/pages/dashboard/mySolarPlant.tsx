@@ -138,28 +138,15 @@ export default function MySolarPlant() {
             beneficiários.
           </p>
         </div>
-        <Link
-          to="/dashboard/usina/new"
-          className="inline-flex h-12 items-center justify-center rounded-xl bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white px-5 font-bold shadow-md hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] transition-all shrink-0 gap-2"
-        >
-          <Plus className="w-5 h-5 stroke-[2.5]" />
-          Adicionar Nova Usina
-        </Link>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (plants.length === 0) {
-              return;
-            }
-
-            navigate(`/dashboard/usina/${plants[0].id}/fatura/new`);
-          }}
-          className="inline-flex h-12 items-center justify-center rounded-xl bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white px-5 font-bold shadow-md hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] transition-all shrink-0 gap-2 cursor-pointer"
-        >
-          <Plus className="w-5 h-5 stroke-[2.5]" />
-          Adicionar Nova Fatura
-        </button>
+        <div className="flex w-full sm:w-auto sm:justify-end gap-3">
+          <Link
+            to="/dashboard/usina/new"
+            className="inline-flex w-full sm:w-auto h-12 items-center justify-center rounded-xl bg-linear-to-r from-[#2E5CFF] to-[#FF7A2F] text-white px-5 font-bold shadow-md hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] transition-all shrink-0 gap-2"
+          >
+            <Plus className="w-5 h-5 stroke-[2.5]" />
+            Adicionar Nova Usina
+          </Link>
+        </div>
       </div>
 
       {/* Global Maintenance Alerts Panel */}
@@ -174,22 +161,22 @@ export default function MySolarPlant() {
               As seguintes usinas ativas necessitam de manutenção preventiva
               (recomendada a cada 6 meses):
             </p>
-            <ul className="list-disc list-inside mt-2 text-xs text-slate-650 dark:text-slate-350 space-y-1">
+            <ul className="list-disc list-inside mt-2 text-xs text-slate-600 dark:text-slate-300 space-y-1">
               {maintenanceAlerts.map((p) => {
                 const months = getMonthsSince(p.lastMaintenanceDate);
                 return (
                   <li key={p.id} className="truncate">
-                    <span className="font-semibold text-slate-800 dark:text-slate-250">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
                       {p.name}
                     </span>{" "}
                     -
                     {months >= 6 ? (
-                      <span className="text-red-650 dark:text-red-400 font-bold">
+                      <span className="text-red-600 dark:text-red-400 font-bold">
                         {" "}
                         Manutenção vencida há {months} meses!
                       </span>
                     ) : (
-                      <span className="text-amber-650 dark:text-amber-550">
+                      <span className="text-amber-600 dark:text-amber-500">
                         {" "}
                         Recomendado realizar manutenção preventiva (última há{" "}
                         {months} meses).
@@ -228,7 +215,7 @@ export default function MySolarPlant() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-250 text-sm focus:outline-none focus:border-blue-500"
+            className="w-full sm:w-auto min-w-0 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-500"
           >
             <option value="all">Todos os Status</option>
             <option value="ativo">Usinas Ativas</option>
@@ -239,7 +226,7 @@ export default function MySolarPlant() {
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value as any)}
-            className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-250 text-sm focus:outline-none focus:border-blue-500"
+            className="w-full sm:w-auto min-w-0 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 text-sm focus:outline-none focus:border-blue-500"
           >
             <option value="default">Ordenação Padrão</option>
             <option value="highest">Maior Produção</option>
@@ -250,7 +237,7 @@ export default function MySolarPlant() {
 
       {/* Plants Grid */}
       {filteredPlants.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-6">
           {filteredPlants.map((plant) => {
             const monthsSinceMaintenance = getMonthsSince(
               plant.lastMaintenanceDate,
@@ -262,6 +249,12 @@ export default function MySolarPlant() {
             return (
               <div
                 key={plant.id}
+                role="link"
+                tabIndex={0}
+                aria-label={`Ver detalhes da usina ${plant.name}`}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") navigate(`/dashboard/usina/info/${plant.id}`, { state: plant });
+                }}
                 onClick={() =>
                   navigate(`/dashboard/usina/info/${plant.id}`, {
                     state: plant,
@@ -301,11 +294,11 @@ export default function MySolarPlant() {
                   {/* Info List */}
                   <div className="space-y-2 mt-4">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-450 dark:text-slate-400">
+                      <span className="text-slate-400 dark:text-slate-400">
                         Beneficiários:
                       </span>
                       <span className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5 text-slate-450" />
+                        <Users className="w-3.5 h-3.5 text-slate-400" />
                         {plant.beneficiaries.length}{" "}
                         {plant.beneficiariesLimit
                           ? `/ ${plant.beneficiariesLimit}`
@@ -314,17 +307,17 @@ export default function MySolarPlant() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-450 dark:text-slate-400">
+                      <span className="text-slate-400 dark:text-slate-400">
                         Geração Mensal:
                       </span>
                       <span className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
-                        <BatteryCharging className="w-3.5 h-3.5 text-slate-450" />
+                        <BatteryCharging className="w-3.5 h-3.5 text-slate-400" />
                         {plant.lastMonthProduction.toLocaleString()} kWh
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-450 dark:text-slate-400">
+                      <span className="text-slate-400 dark:text-slate-400">
                         Painéis Instalados:
                       </span>
                       <span className="font-bold text-slate-700 dark:text-slate-200">
@@ -337,7 +330,7 @@ export default function MySolarPlant() {
                   {plant.status === "ativo" && (
                     <>
                       {needsRedAlert && (
-                        <div className="mt-3 px-3 py-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-650 dark:text-red-400 rounded-xl text-[11px] font-bold flex items-center gap-1.5 animate-pulse">
+                        <div className="mt-3 px-3 py-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-[11px] font-bold flex items-center gap-1.5 animate-pulse">
                           <AlertOctagon className="w-4 h-4 text-red-500 shrink-0" />
                           <span className="truncate">
                             Manutenção atrasada! (há {monthsSinceMaintenance}{" "}
@@ -347,7 +340,7 @@ export default function MySolarPlant() {
                       )}
 
                       {needsYellowAlert && (
-                        <div className="mt-3 px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-650 dark:text-amber-500 rounded-xl text-[11px] font-bold flex items-center gap-1.5">
+                        <div className="mt-3 px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-500 rounded-xl text-[11px] font-bold flex items-center gap-1.5">
                           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
                           <span className="truncate">
                             Manutenção necessária (há {monthsSinceMaintenance}{" "}

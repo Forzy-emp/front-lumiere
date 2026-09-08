@@ -419,6 +419,7 @@ export default function Reports() {
             </label>
 
             <select
+              aria-label="Usina do relatório"
               value={usinaSelecionada ?? ""}
               onChange={(e) => setUsinaSelecionada(Number(e.target.value))}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-lumiere-primary focus:ring-2 focus:ring-lumiere-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
@@ -438,6 +439,7 @@ export default function Reports() {
             </label>
 
             <select
+              aria-label="Competência do relatório"
               value={faturaSelecionada ?? ""}
               disabled={faturas.length === 0}
               onChange={(e) => setFaturaSelecionada(Number(e.target.value))}
@@ -579,7 +581,7 @@ export default function Reports() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
                     {/* ENERGIA NÃO COMPENSADA */}
                     <MiniIndicador
                       titulo="Energia não compensada"
@@ -671,7 +673,7 @@ export default function Reports() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
                     <MiniIndicador
                       titulo="Energia não compensada"
                       valor={`${numero(
@@ -779,7 +781,7 @@ export default function Reports() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
                     <MiniIndicador
                       titulo="TUSD fornecida"
                       valor={moeda(calculos.reconstrucaoFatura.tusdFornecida)}
@@ -873,7 +875,7 @@ export default function Reports() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     <MiniIndicador
                       titulo="Benchmark regulatório do piso"
                       valor={
@@ -948,8 +950,8 @@ export default function Reports() {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                  <div className="overflow-x-auto overscroll-x-contain" role="region" aria-label="Tabela do relatório, role horizontalmente para ver todas as colunas" tabIndex={0}>
+                    <table className="w-full min-w-[640px] text-sm">
                       <thead>
                         <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-slate-700">
                           <th className="px-3 py-3">Ligação</th>
@@ -1037,8 +1039,8 @@ export default function Reports() {
                       suficientes para conferência.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                    <div className="overflow-x-auto overscroll-x-contain" role="region" aria-label="Tabela do relatório, role horizontalmente para ver todas as colunas" tabIndex={0}>
+                      <table className="w-full min-w-[640px] text-sm">
                         <thead>
                           <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-slate-700">
                             <th className="px-3 py-3">Item</th>
@@ -1147,7 +1149,7 @@ export default function Reports() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
                     <MiniIndicador
                       titulo="Créditos Recebidos"
                       valor={`${numero(
